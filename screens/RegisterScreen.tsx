@@ -1,7 +1,10 @@
-import { View, Text, StyleSheet,Image, } from 'react-native'
+import { View, Text, StyleSheet,Image, TextInput, TouchableOpacity, } from 'react-native'
+import { useState } from 'react';
 import React from 'react'
 
 export default function RegisterScreen() {
+   const [isChecked, setChecked] = useState(false);
+
   return (
     <View style={styles.container}>
         <View style={styles.header}>
@@ -12,6 +15,22 @@ export default function RegisterScreen() {
 
             </View>
         </View>
+        <View style={styles.form}>
+          <TextInput style={styles.textField} placeholderTextColor="#999" placeholder='Full Names'/>
+          <TextInput style={styles.textField} placeholderTextColor="#999" placeholder='Email ' />
+          <TextInput style={styles.textField} placeholderTextColor="#999" placeholder='Phone Number'/>
+          <TextInput style={styles.textField} placeholderTextColor="#999" placeholder='Password' />
+
+        </View>
+
+        <View style={styles.termRow}>
+          <Checkbox style={styles.checkbox} value={isChecked} onValueChange={setChecked} />
+          <Text>l agree to the term & Condition</Text>
+        </View>
+
+        <TouchableOpacity style={styles.registerBtn}>
+          <Text style={styles.btn}>Register</Text>
+        </TouchableOpacity>
 
     </View>
   )
@@ -35,17 +54,40 @@ const styles = StyleSheet.create({
 
   },
   textAccount:{
-    alignItems:'center'
+    alignItems:'center',
+    marginBottom:30,
+    marginTop:10
 
   },
   textName:{
     fontSize:30,
-    fontWeight:"bold"
+    fontWeight:"bold",
+    marginBottom:10
 
   },
   shortText:{
     
 
+  },
+  form:{
+    width:'100%',
+    height:'60%',
+    gap:10
+   
+    
+    
+
+  },
+  textField:{
+    borderRadius:7,
+    height:'15%',
+    width:'95%',
+    borderWidth:1,
+    padding:4
+
+    
+
   }
+
 })
 
