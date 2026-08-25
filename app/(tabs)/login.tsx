@@ -1,0 +1,1 @@
+import LoginScreen from '../../screens/RegisterScreen'
