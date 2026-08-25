@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet,Image, TextInput, TouchableOpacity, } from 'react-native'
 import { useState } from 'react';
+import { Checkbox } from 'expo-checkbox';
 import React from 'react'
 
 export default function RegisterScreen() {
