@@ -1,10 +1,10 @@
 import { View, Text } from 'react-native'
 import React from 'react'
 
-export default function explore() {
+export default function RouteResultsScreen() {
   return (
     <View>
-      <Text>explore</Text>
+      <Text>RouteResultsScreen</Text>
     </View>
   )
 }

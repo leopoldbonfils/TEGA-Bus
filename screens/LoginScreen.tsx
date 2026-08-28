@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, Image, TextInput, TouchableOpacity } from 'react-native'
 import { Checkbox } from 'expo-checkbox';
 import React from 'react'
+import { router } from 'expo-router';
 import { Ionicons, FontAwesome,} from '@expo/vector-icons';
 
 export default function LoginScreen() {
@@ -43,7 +44,7 @@ export default function LoginScreen() {
 
       </View>
 
-      <TouchableOpacity style={styles.loginBtn}>
+      <TouchableOpacity style={styles.loginBtn} onPress={() => router.replace('/(tabs)')}>
         <Text style={styles.loginBtnText}>LOGIN</Text>
       </TouchableOpacity>
 
@@ -66,7 +67,7 @@ export default function LoginScreen() {
 
       <View style={styles.registerRow}>
         <Text style={styles.registerText}>Don't have an account? </Text>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={()=> router.push('/register')}>
           <Text style={styles.registerLink}>Register</Text>
         </TouchableOpacity>
       </View>

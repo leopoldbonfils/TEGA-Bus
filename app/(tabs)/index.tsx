@@ -1,5 +1,3 @@
-import RegisterScreen from "../../screens/RegisterScreen";
-import LoginScreen from "../../screens/LoginScreen";
-//import SplashScreen from "../../screens/SplashScreen";
+import HomeScreen from "../../screens/HomeScreen";
 
-export default RegisterScreen ;
+export default HomeScreen;

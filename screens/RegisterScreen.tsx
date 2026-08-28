@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Checkbox } from 'expo-checkbox';
 import React from 'react'
 import { Ionicons, Feather } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
 export default function RegisterScreen() {
   const [isChecked, setChecked] = useState(false);
@@ -52,7 +53,7 @@ export default function RegisterScreen() {
         <Text>I agree to the term & Condition</Text>
       </View>
 
-      <TouchableOpacity style={styles.registerBtn}>
+      <TouchableOpacity style={styles.registerBtn} onPress={() => router.replace('/(tabs)')}>
         <Text style={styles.btn}>Register</Text>
       </TouchableOpacity>
 
@@ -73,7 +74,7 @@ export default function RegisterScreen() {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+      <TouchableOpacity onPress={() => router.push('/login')}>
         <Text style={styles.footerText}>
           Already have an account? <Text style={styles.linkText}>Login</Text>
         </Text>
