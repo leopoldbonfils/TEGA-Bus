@@ -1,3 +1,3 @@
-// app/(tabs)/profile.tsx
-import ProfileScreen from '@/screens/ProfileScreen';
+import ProfileScreen from '../../screens/ProfileScreen'
+
 export default ProfileScreen;

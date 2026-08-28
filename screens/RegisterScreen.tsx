@@ -2,9 +2,10 @@ import { View, Text, StyleSheet, Image, TextInput, TouchableOpacity, ScrollView 
 import { useState } from 'react';
 import { Checkbox } from 'expo-checkbox';
 import React from 'react'
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, Feather } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
-export default function RegisterScreen({ navigation }: any) {
+export default function RegisterScreen() {
   const [isChecked, setChecked] = useState(false);
 
   return (
@@ -17,10 +18,34 @@ export default function RegisterScreen({ navigation }: any) {
       </View>
 
       <View style={styles.form}>
-        <TextInput style={styles.textField} placeholderTextColor="#999" placeholder='Full Names' />
-        <TextInput style={styles.textField} placeholderTextColor="#999" placeholder='Email' />
-        <TextInput style={styles.textField} placeholderTextColor="#999" placeholder='Phone Number' />
-        <TextInput style={styles.textField} placeholderTextColor="#999" placeholder='Password' />
+        <Text style={styles.label}> Full Name</Text>
+        <View style={styles.inputWrapper}>
+          <Ionicons name="person-outline" size={20} color="#999" style={styles.inputIcon} />
+          <TextInput style={styles.textField} placeholderTextColor="#999" placeholder='Enter Full Names' />
+        </View>
+
+        <Text style={styles.label}>Email Address</Text>
+        <View style={styles.inputWrapper}>
+          <Ionicons name="mail-outline" size={20} color="#999" style={styles.inputIcon} />
+          <TextInput style={styles.textField} placeholderTextColor="#999" placeholder="Enter your email" keyboardType="email-address" autoCapitalize="none" />
+        </View>
+        
+        <Text style={styles.label}>Phone Number</Text>
+        <View style={styles.inputWrapper}>
+          <Feather name="phone" size={20} color="#999" style={styles.inputIcon} />
+          <TextInput style={styles.textField} placeholderTextColor="#999" placeholder='Enter Phone Number' />
+
+        </View>
+
+        <Text style={styles.label}>Password</Text>
+        <View style={styles.inputWrapper}>
+          <Ionicons name="lock-closed-outline" size={20} color="#999" style={styles.inputIcon} />
+          <TextInput style={styles.textField} placeholderTextColor="#999" placeholder="Enter your password" secureTextEntry={true} />
+          <TouchableOpacity style={styles.eyeIcon}>
+            <Ionicons name="eye-off-outline" size={20} color="#999" />
+          </TouchableOpacity>
+        </View>
+        
       </View>
 
       <View style={styles.termRow}>
@@ -28,7 +53,7 @@ export default function RegisterScreen({ navigation }: any) {
         <Text>I agree to the term & Condition</Text>
       </View>
 
-      <TouchableOpacity style={styles.registerBtn}>
+      <TouchableOpacity style={styles.registerBtn} onPress={() => router.replace('/(tabs)')}>
         <Text style={styles.btn}>Register</Text>
       </TouchableOpacity>
 
@@ -40,7 +65,7 @@ export default function RegisterScreen({ navigation }: any) {
 
       <View style={styles.socialRow}>
         <TouchableOpacity style={styles.socialButton}>
-          <Ionicons name="logo-google" size={18} color="#DB4437" />
+          <Image source={require('../assets/BusImage/google.png')} style={styles.googleImage}/>
           <Text style={styles.socialText}>Google</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.socialButton}>
@@ -49,7 +74,7 @@ export default function RegisterScreen({ navigation }: any) {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+      <TouchableOpacity onPress={() => router.push('/login')}>
         <Text style={styles.footerText}>
           Already have an account? <Text style={styles.linkText}>Login</Text>
         </Text>
@@ -62,15 +87,15 @@ export default function RegisterScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#F0F4FA',
   },
   scrollContent: {
     padding: 24,
-    paddingBottom: 40,
+    paddingBottom: '20%',
   },
   header: {
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 20,
     marginBottom: 20,
   },
   logoImage: {
@@ -97,7 +122,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 7,
+    marginBottom: 15,
     marginTop: 6,
   },
   checkbox: {},
@@ -115,14 +140,39 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.5,
   },
-  textField: {
-    borderRadius: 10,
-    height: 50,
-    borderWidth: 1,
-    borderColor: '#DDD',
-    paddingHorizontal: 14,
-    fontSize: 14,
+  label: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 1,
+    marginTop: 5,
   },
+
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    paddingHorizontal: 12,
+    height: 50,
+  },
+
+  inputIcon: {
+    marginRight: 10,
+  },
+
+  textField: {
+    flex: 1,
+    fontSize: 15,
+    color: '#333',
+  },
+
+  eyeIcon: {
+    paddingLeft: 8,
+  },
+
   dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -167,5 +217,9 @@ const styles = StyleSheet.create({
   linkText: {
     color: '#0B3D66',
     fontWeight: '600',
+  },
+   googleImage:{
+    width:18,
+    height:18
   },
 });
