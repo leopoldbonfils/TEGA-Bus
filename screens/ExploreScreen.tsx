@@ -3,10 +3,12 @@ import {StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView, ImageBa
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, FontAwesome, FontAwesome6, AntDesign, MaterialIcons, MaterialCommunityIcons, FontAwesome5,} from '@expo/vector-icons';
 import { router } from 'expo-router';
+import Header from '../components/Header';
 
 export default function ExploreScreen() {
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
+      <Header />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         
         <View style={styles.searchField}>
@@ -166,7 +168,7 @@ export default function ExploreScreen() {
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -174,6 +176,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F0F4FA',
+    
   },
   scrollContent: {
     paddingHorizontal: 20,

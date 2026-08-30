@@ -2,6 +2,8 @@ import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet } from 'rea
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import React from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Headers from '@/components/Header';
 const accountItems = [
   { icon: 'person-outline', label: 'Personal Info' },
   { icon: 'location-outline', label: 'Saved Locations' },
@@ -41,17 +43,11 @@ function ProfileRow({
 }
 
 export default function ProfileScreen() {
- return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Ionicons name="person-circle-outline" size={24} color="#0B3D66" />
-        <Text style={styles.headerTitle}>TEGA Bus Rwanda</Text>
-        <TouchableOpacity>
-          <Ionicons name="notifications-outline" size={22} color="#333" />
-        </TouchableOpacity>
-      </View>
+  return (
 
+      <View style={styles.container}>
+        <Headers />
+      
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Avatar + name */}
         <View style={styles.profileInfo}>
@@ -84,6 +80,8 @@ export default function ProfileScreen() {
       </ScrollView>
 
     </View>
+
+    
   );
 }
 
