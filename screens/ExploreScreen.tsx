@@ -108,7 +108,7 @@ export default function ExploreScreen() {
               <View style={styles.busBottomRow}>
                 <View style={styles.statsRow}>
                   <View style={styles.statItem}>
-                    <MaterialIcons name="alt-route" size={16} color="#475569" />
+                    <MaterialIcons name="route" size={16} color="#475569" />
                     <Text style={styles.routerStop}>8 Stops</Text>
                   </View>
                   <View style={styles.TimeClock}>
@@ -148,7 +148,7 @@ export default function ExploreScreen() {
               <View style={styles.busBottomRow}>
                 <View style={styles.statsRow}>
                   <View style={styles.statItem}>
-                    <MaterialIcons name="alt-route" size={16} color="#475569" />
+                    <MaterialIcons name="route" size={16} color="#475569" />
                     <Text style={styles.routerStop}>12 Stops</Text>
                   </View>
                   <View style={styles.TimeClock}>
@@ -173,7 +173,7 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFBFC',
+    backgroundColor: '#F0F4FA',
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
 
-  
+
   firstCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,

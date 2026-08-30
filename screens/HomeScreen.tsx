@@ -1,350 +1,406 @@
-import{ View,Text,TouchableOpacity,StyleSheet,ScrollView} from 'react-native';
 import React from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import {Ionicons,MaterialIcons,MaterialCommunityIcons,FontAwesome5,} from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 
 export default function HomeScreen() {
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-    <View style={styles.searchBox}>
-    <Text style={styles.title}>Where do you want to go?</Text>
-    <TouchableOpacity style={styles.locationBox}>
-    <Ionicons name="location-outline" size={24} color="#555" />
-    <Text style={styles.locationText}>current location</Text>
-    </TouchableOpacity>
-    <TouchableOpacity style={styles.locationBox}>
-      <Ionicons name="location" size={24} color="#555" />
-      <Text style={styles.locationText}>search destination</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.findButton}>
-      <Text style={styles.findButtonText}>Find Route</Text>
-      </TouchableOpacity>
-     </View>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+    
+        <View style={styles.searchBox}>
+          <Text style={styles.title}>Where do you want to go?</Text>
 
+          <TouchableOpacity style={styles.locationBox} activeOpacity={0.7}>
+            <MaterialIcons name="my-location" size={20} color="#64748B" />
+            <Text style={styles.locationText}>Current Location</Text>
+          </TouchableOpacity>
 
-     <View style={styles.menuRow}>
-      <TouchableOpacity  style={styles.menuButton}>
-        <Ionicons name ="menu" size={24} color="#555" />
-        <Text style={styles.menuButtonText}>Find BUs</Text>
-      </TouchableOpacity>
-     
-    <TouchableOpacity style={styles.menuButton}>
-          <View style={styles.iconCircle}>
-            <Ionicons name="location-outline" size={24} color="#0B3D66" />
-          </View>
-         <Text style={styles.menuText}> NearbyStops</Text>
-         </TouchableOpacity>
+          <TouchableOpacity style={styles.locationBox} activeOpacity={0.7}>
+            <Ionicons name="location" size={20} color="#0F172A" />
+            <Text style={styles.destinationPlaceholder}>Search destination</Text>
+          </TouchableOpacity>
 
-      <TouchableOpacity style={styles.menuButton}>
-        <View style={styles.iconCircle}>
-          <Ionicons name="git-branch-outline" size={24} color="#0B3D66" />
-         <Text style={styles.menuText}> Plan a Trip</Text>
+          <TouchableOpacity style={styles.findButton} activeOpacity={0.85} onPress={() => router.push('/(tabs)/explore')}>
+            <Text style={styles.findButtonText}>FIND ROUTE</Text>
+          </TouchableOpacity>
         </View>
-        </TouchableOpacity>
+        
+        <View style={styles.menuRow}>
+          <TouchableOpacity style={styles.menuButton} activeOpacity={0.7} onPress={() => router.push('/(tabs)/explore')}>
+            <View style={styles.iconCircle}>
+              <FontAwesome5 name="bus" size={20} color="#04325E" />
+            </View>
+            <Text style={styles.menuText}>Find Bus</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuButton}>
-          <View style={styles.iconCircle}>
-            <Ionicons name="ticket-outline" size={24} color="#0B3D66" />
-          </View>
+          <TouchableOpacity style={styles.menuButton} activeOpacity={0.7} onPress={() => router.push('/map')}>
+            <View style={styles.iconCircle}>
+              <MaterialIcons name="pin-drop" size={22} color="#04325E" />
+            </View>
+            <Text style={styles.menuText}>Nearby{'\n'}Stops</Text>
+          </TouchableOpacity>
 
-          <Text style={styles.menuText}> My Tickets</Text>
-        </TouchableOpacity>
+        
+          <TouchableOpacity style={styles.menuButton} activeOpacity={0.7} onPress={() => router.push('/(tabs)/explore')}>
+            <View style={styles.iconCircle}>
+              <MaterialIcons name="route" size={22} color="#04325E" />
+            </View>
+            <Text style={styles.menuText}>Plan Trip</Text>
+          </TouchableOpacity>
+
+    
+          <TouchableOpacity style={styles.menuButton} activeOpacity={0.7} onPress={() => router.push('/(tabs)/trips')}>
+            <View style={styles.iconCircle}>
+              <MaterialCommunityIcons name="ticket-confirmation-outline" size={22} color="#04325E" />
+            </View>
+            <Text style={styles.menuText}>My{'\n'}Tickets</Text>
+          </TouchableOpacity>
         </View>
 
+      
         <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Upcoming Trip </Text>
-      </View>
-
-      <View style={styles.tripCard}>
-      <View style={styles.routeBox}>
-      <Text style={styles.routeText}>Route</Text>
-      <Text style={styles.routeNumber}> 101</Text>
-      </View>
-      <View style={styles.tripInfo}>
-
-          <Text style={styles.destinationText}> To Nyabugogo</Text>
-
-          <View style={styles.timeRow}>
-            <Ionicons name="time-outline" size={16} color="#555" />
-         <Text style={styles.timeText}> 08:30 AM</Text>
+          <Text style={styles.sectionTitle}>Upcoming Trip</Text>
         </View>
-        </View>
-        <View style={styles.arrivalSection}>
 
-          <View style={styles.arrivingBox}>
-            <Text style={styles.arrivingText}>Arriving</Text>
-          </View>
-          <Text style={styles.minutesText}>in 5 mins</Text>
-          </View>
+        <View style={styles.tripCard}>
+          <View style={styles.routeBox}>
+            <Text style={styles.routeText}>ROUTE</Text>
+            <Text style={styles.routeNumber}>101</Text>
           </View>
 
-         <View style={styles.nearbyHeader}>
+          <View style={styles.tripInfo}>
+            <Text style={styles.destinationText}>To Nyabugogo</Text>
+            <View style={styles.timeRow}>
+              <Ionicons name="time-outline" size={15} color="#64748B" />
+              <Text style={styles.timeText}>08:30 AM</Text>
+            </View>
+          </View>
 
-        <Text style={styles.sectionTitle}> Nearby Stops</Text>
-          <TouchableOpacity>
-          <Text style={styles.viewMap}>View map</Text>
-        </TouchableOpacity>
-      </View>
-      <View style={styles.stopCard}>
+          <View style={styles.arrivalSection}>
+            <View style={styles.arrivingBox}>
+              <Text style={styles.arrivingText}>Arriving</Text>
+            </View>
+            <Text style={styles.minutesText}>in 5 mins</Text>
+          </View>
+        </View>
 
-        <View style={styles.stopNameRow}>
-        <Ionicons name="qr-code-outline"size={22}color="#0B3D66"/>
-        <Text style={styles.stopName}> Downtown Kigali</Text>
+    
+        <View style={styles.nearbyHeader}>
+          <Text style={styles.sectionTitle}>Nearby Stop</Text>
+          <TouchableOpacity onPress={() => router.push('/map')}>
+            <Text style={styles.viewMap}>View map</Text>
+          </TouchableOpacity>
         </View>
-        <View style={styles.detailsRow}>
-        <View style={styles.detailItem}>
-        <Ionicons name="resize-outline"size={15} color="#555" />
-       <Text style={styles.detailText}>500m</Text>
+
+        <View style={styles.stopCard}>
+          <View style={styles.stopNameRow}>
+            <MaterialIcons name="grid-view" size={22} color="#04325E" />
+            <Text style={styles.stopName}>Downtown Kigali</Text>
           </View>
-        <View style={styles.detailItem}>
-        <Ionicons name="walk-outline" size={16} color="#555"/>
-        <Text style={styles.detailText}> 6 min</Text>
-        </View>
-        </View>
-        <Text style={styles.availableText}> Available Buses:</Text>
-        <View style={styles.busRow}>
-        <View style={styles.busNumber}>
-        <Text style={styles.busText}>101</Text>
+
+          <View style={styles.detailsRow}>
+            <View style={styles.detailItem}>
+              <Ionicons name="bus-outline" size={16} color="#64748B" />
+              <Text style={styles.detailText}>500m</Text>
+            </View>
+            <View style={styles.detailItem}>
+              <MaterialIcons name="directions-walk" size={18} color="#64748B" />
+              <Text style={styles.detailText}>6 min</Text>
+            </View>
           </View>
-        <View style={styles.busNumber}>
-        <Text style={styles.busText}> 102 </Text>
+
+          <Text style={styles.availableText}>Available Buses:</Text>
+          <View style={styles.busRow}>
+            <View style={styles.busNumber}>
+              <Text style={styles.busText}>101</Text>
+            </View>
+            <View style={styles.busNumber}>
+              <Text style={styles.busText}>102</Text>
+            </View>
+            <View style={styles.busNumber}>
+              <Text style={styles.busText}>105</Text>
+            </View>
           </View>
-        <View style={styles.busNumber}>
-        <Text style={styles.busText}>  105 </Text>
         </View>
-       </View>
-      </View>
       </ScrollView>
-  )
+    </SafeAreaView>
+  );
 }
+
 const styles = StyleSheet.create({
- container: {
+  container: {
     flex: 1,
-    backgroundColor: '#F5F7FC',
+    backgroundColor: '#F0F4FA',
   },
   scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 32,
   },
+
   searchBox: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     padding: 18,
-    borderRadius: 10,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#DDD',
-    marginBottom: 18,
+    borderColor: '#E2E8F0',
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
   },
   title: {
     fontSize: 22,
-    fontWeight: '700',
-    color: '#0B3D66',
-    marginBottom: 15,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 16,
+    letterSpacing: -0.3,
   },
   locationBox: {
     height: 50,
     borderWidth: 1,
-    borderColor: '#DDD',
-    borderRadius: 10,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 14,
-    marginBottom: 10,
-    backgroundColor: '#F8F9FD',
+    marginBottom: 12,
+    backgroundColor: '#F8FAFC',
+    gap: 12,
   },
   locationText: {
-    marginLeft: 14,
     fontSize: 14,
-    color: '#333',
+    color: '#334155',
+    fontWeight: '500',
   },
-  placeholderText: {
-    marginLeft: 14,
+  destinationPlaceholder: {
     fontSize: 14,
-    color: '#999',
+    color: '#94A3B8',
+    fontWeight: '400',
   },
   findButton: {
     height: 48,
-    backgroundColor: '#0B3D66',
-    borderRadius: 8,
+    backgroundColor: '#04325E',
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 2,
+    marginTop: 4,
+    shadowColor: '#04325E',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 5,
+    elevation: 3,
   },
   findButtonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+    fontWeight: '800',
+    letterSpacing: 0.8,
   },
+
+
   menuRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 22,
+    marginBottom: 24,
+    gap: 8,
   },
   menuButton: {
-    width: '23%',
-    height: 96,
-    backgroundColor: '#fff',
+    flex: 1,
+    height: 98,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#DDD',
-    borderRadius: 8,
+    borderColor: '#E2E8F0',
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
+    elevation: 1,
   },
-  menuButtonText:{},
- iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#E5EEFF',
+  iconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#DBEAFE',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 6,
   },
   menuText: {
-    fontSize: 12,
-    color: '#333',
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#334155',
     textAlign: 'center',
+    lineHeight: 14,
   },
-  sectionHeader: {},
 
- sectionTitle:{
-   marginBottom: 10,
- },
- tripCard:{
-   backgroundColor: '#fff',
+
+  sectionHeader: {
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  tripCard: {
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#DDD',
-    borderRadius: 8,
-    padding: 14,
+    borderColor: '#E2E8F0',
+    borderRadius: 16,
+    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 22,
-
- },
- routeBox:{
-   width: 45,
-    height: 48,
-    backgroundColor: '#0B3D66',
-    borderRadius: 6,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  routeBox: {
+    width: 52,
+    height: 52,
+    backgroundColor: '#04325E',
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
- },
- routeText:{
-  color: '#fff',
+  },
+  routeText: {
+    color: '#93C5FD',
     fontSize: 10,
- },
- routeNumber:{
-  color: '#fff',
-    fontSize: 18,
     fontWeight: '700',
- },
- tripInfo:{
-   flex: 1,
-    marginLeft: 12,
- },
- destinationText:{
-   fontSize: 14,
-    color: '#333',
-    marginBottom: 5,
- },
- timeRow:{
-  flexDirection: 'row',
+    letterSpacing: 0.5,
+  },
+  routeNumber: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  tripInfo: {
+    flex: 1,
+    marginLeft: 14,
+  },
+  destinationText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 4,
+  },
+  timeRow: {
+    flexDirection: 'row',
     alignItems: 'center',
- },
- timeText:{
-  marginLeft: 5,
+    gap: 4,
+  },
+  timeText: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#222',
- },
- arrivalSection:{
-      alignItems: 'flex-end',
-
- },
- arrivingBox:{
-  backgroundColor: '#E8FFF0',
+    fontWeight: '500',
+    color: '#64748B',
+  },
+  arrivalSection: {
+    alignItems: 'flex-end',
+  },
+  arrivingBox: {
+    backgroundColor: '#DCFCE7',
     borderWidth: 1,
-    borderColor: '#43D17B',
-    borderRadius: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 7,
+    borderColor: '#86EFAC',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  arrivingText: {
+    color: '#15803D',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  minutesText: {
+    marginTop: 4,
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#64748B',
+  },
 
- },
- arrivingText:{
-  color: '#168844',
-    fontSize: 12,
-    fontWeight: '600',
- },
- minutesText:{
-  marginTop: 7,
-    fontSize: 12,
-    color: '#444',
- },
- nearbyHeader:{
-  flexDirection: 'row',
+  
+  nearbyHeader: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
- },
- viewMap:{
-  fontSize: 12,
-    color: '#0B3D66',
+    marginBottom: 12,
+  },
+  viewMap: {
+    fontSize: 13,
+    color: '#04325E',
     fontWeight: '600',
- },
- stopCard:{
-  backgroundColor: '#fff',
+  },
+  stopCard: {
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#DDD',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 30,
- },
- stopNameRow:{
-   flexDirection: 'row',
+    borderColor: '#E2E8F0',
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  stopNameRow: {
+    flexDirection: 'row',
     alignItems: 'center',
- },
- stopName:{
-   marginLeft: 10,
+    gap: 8,
+  },
+  stopName: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1D2B3C',
- },
-detailsRow:{
-   flexDirection: 'row',
-    marginTop: 8,
-    marginLeft: 27,
-},
-detailItem:{
-  flexDirection: 'row',
+    color: '#0F172A',
+  },
+  detailsRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 15,
-},
-detailText:{
-   marginLeft: 4,
+    marginTop: 8,
+    marginLeft: 30,
+    gap: 16,
+  },
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  detailText: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  availableText: {
     fontSize: 12,
-    color: '#555',
-},
-availableText:{
-   fontSize: 12,
-    color: '#444',
-    marginTop: 18,
+    color: '#64748B',
+    fontWeight: '600',
+    marginTop: 16,
     marginBottom: 8,
-},
-busRow:{
-      flexDirection: 'row',
-
-},
-busNumber:{
-  backgroundColor: '#DCE8FA',
-    borderWidth: 1,
-    borderColor: '#b0b2ad',
+  },
+  busRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  busNumber: {
+    backgroundColor: '#DBEAFE',
     paddingHorizontal: 14,
-    borderRadius: 15,
-    marginRight: 7,
-
-},
-busText:{
-  fontSize: 12,
-color: '#26313F',
-},
-
-})
+    paddingVertical: 5,
+    borderRadius: 16,
+  },
+  busText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#04325E',
+  },
+});
