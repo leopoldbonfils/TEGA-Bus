@@ -1,6 +1,5 @@
 import { View, Text, StyleSheet, Image, TextInput, TouchableOpacity } from 'react-native'
 import { Checkbox } from 'expo-checkbox';
-import React from 'react'
 import { router } from 'expo-router';
 import { Ionicons, FontAwesome,} from '@expo/vector-icons';
 
