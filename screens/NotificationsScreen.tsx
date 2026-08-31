@@ -182,14 +182,15 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    fontSize: 36,
+    fontSize: 20,
     fontWeight: '700',
     color: '#0B2F55',
     marginBottom: 35,
+    marginTop: 49,
   },
 
   sectionTitle: {
-    fontSize: 24,
+    fontSize: 15,
     fontWeight: '700',
     color: '#1E3148',
     marginBottom: 20,
@@ -226,20 +227,20 @@ const styles = StyleSheet.create({
   },
 
   alertTitle: {
-    fontSize: 22,
+    fontSize: 15,
     fontWeight: '700',
     color: '#26384C',
     flex: 1,
   },
 
   time: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#596575',
     marginLeft: 10,
   },
 
   alertDescription: {
-    fontSize: 17,
+    fontSize: 15,
     color: '#596575',
     lineHeight: 26,
     marginTop: 8,
@@ -267,14 +268,14 @@ const styles = StyleSheet.create({
   },
 
   serviceTitle: {
-    fontSize: 22,
+    fontSize: 15,
     fontWeight: '700',
     color: '#8B1E1E',
     flex: 1,
   },
 
   serviceTime: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#8B1E1E',
     marginLeft: 10,
   },
@@ -298,7 +299,7 @@ const styles = StyleSheet.create({
   },
 
   rateText: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#315979',
     fontWeight: '500',
   },
