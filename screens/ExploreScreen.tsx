@@ -1,7 +1,6 @@
 import React from 'react';
-import {StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView, ImageBackground} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons, FontAwesome, FontAwesome6, AntDesign, MaterialIcons, MaterialCommunityIcons, FontAwesome5,} from '@expo/vector-icons';
+import {StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView,} from 'react-native';
+import { Ionicons, FontAwesome, FontAwesome6, AntDesign, MaterialIcons, MaterialCommunityIcons,} from '@expo/vector-icons';
 import { router } from 'expo-router';
 import Header from '../components/Header';
 
