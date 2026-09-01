@@ -1,11 +1,10 @@
 import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
 import React from 'react';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import Headers from '@/components/Header';
+import { useAuth } from '@/context/AuthContext';
 
 const accountItems = [
   { icon: 'person-outline', label: 'Personal Info' },
@@ -46,6 +45,8 @@ function ProfileRow({
 }
 
 export default function ProfileScreen() {
+  const { user, logout } = useAuth();
+
   const handleLogout = () => {
     Alert.alert(
       'Log Out',
@@ -56,6 +57,7 @@ export default function ProfileScreen() {
           text: 'Log Out',
           style: 'destructive',
           onPress: () => {
+            logout();
             Toast.show({
               type: 'success',
               text1: 'Logged Out',
@@ -82,8 +84,8 @@ export default function ProfileScreen() {
               <Ionicons name="pencil" size={12} color="#fff" />
             </TouchableOpacity>
           </View>
-          <Text style={styles.name}>Alex Murenzi</Text>
-          <Text style={styles.email}>alex@example.com</Text>
+          <Text style={styles.name}>{user?.name || 'User Profile'}</Text>
+          <Text style={styles.email}>{user?.email || 'No email provided'}</Text>
         </View>
 
         {/* Account section */}

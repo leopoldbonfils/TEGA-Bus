@@ -5,8 +5,10 @@ import { router } from 'expo-router';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
 import { loginUser } from '@/services/authService';
 import Toast from 'react-native-toast-message';
+import { useAuth } from '@/context/AuthContext';
 
 export default function LoginScreen() {
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isChecked, setIsChecked] = useState(false);
@@ -45,6 +47,11 @@ export default function LoginScreen() {
         email: email.trim().toLowerCase(),
         password: password,
       });
+
+      // Save user in context
+      if (response.user) {
+        login(response.user, response.token);
+      }
 
       Toast.show({
         type: 'success',
