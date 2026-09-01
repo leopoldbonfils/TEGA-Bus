@@ -191,7 +191,7 @@ export default function RegisterScreen() {
       </View>
 
       <View style={styles.termRow}>
-        <Checkbox style={styles.checkbox} value={isChecked} onValueChange={setIsChecked} />
+        <Checkbox style={styles.checkbox} value={isChecked} onValueChange={setIsChecked} color={isChecked ? '#007AFF' : undefined} />
         <Text>I agree to the term & Condition</Text>
       </View>
 
@@ -221,9 +221,7 @@ export default function RegisterScreen() {
       </View>
 
       <TouchableOpacity onPress={() => router.push('/login')}>
-        <Text style={styles.footerText}>
-          Already have an account? <Text style={styles.linkText}>Login</Text>
-        </Text>
+        <Text style={styles.footerText}>Already have an account? <Text style={styles.linkText}>Login</Text></Text>
       </TouchableOpacity>
 
     </ScrollView>

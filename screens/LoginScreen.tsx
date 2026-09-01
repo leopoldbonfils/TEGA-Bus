@@ -1,62 +1,72 @@
-import { View, Text, StyleSheet, Image, TextInput, TouchableOpacity } from 'react-native'
+import { View, Text, StyleSheet, Image, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Checkbox } from 'expo-checkbox';
-import React, { useState } from 'react'
+import React, { useState } from 'react';
 import { router } from 'expo-router';
-import { Ionicons, FontAwesome,} from '@expo/vector-icons';
-import { registerUser } from '@/services/authService';
+import { Ionicons, FontAwesome } from '@expo/vector-icons';
+import { loginUser } from '@/services/authService';
 import Toast from 'react-native-toast-message';
 
 export default function LoginScreen() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isChecked, setIsChecked] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  const [email, setEmail] = useState ("");
-  const [password, setPassword]= useState("");
-  const [isChecked,setIsChecked] = useState(false);
-  const [loading,setLoading] = useState(false);
-  const [showPassword,setShowPassword] = useState(false);
-
-  const handleLogin = async()=>{
-    
-    if(!email.trim()){
+  const handleLogin = async () => {
+    if (!email.trim()) {
       Toast.show({
-        type:'error',
-        text1:'Email is required'
-      })
-    }
-    if(!password.trim()){
-      Toast.show({
-        type:'error',
-        text1:'Password is required'
-      })
-      return;
-
-    }
-
-    if(!/^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/.test(email)){
-      Toast.show({
-        type:'error',
-        text1:'Invalid email'
-      })
+        type: 'error',
+        text1: 'Email is required',
+      });
       return;
     }
-    if(!isChecked){
+
+    if (!/^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/.test(email.trim())) {
       Toast.show({
-        type:'error',
-        text1:'You must agree to the terms and conditions'
-      })
+        type: 'error',
+        text1: 'Invalid email address',
+      });
       return;
     }
+
+    if (!password.trim()) {
+      Toast.show({
+        type: 'error',
+        text1: 'Password is required',
+      });
+      return;
+    }
+
     setLoading(true);
 
-
-
     try {
-      
-      
-    } catch (error) {
-      
-    }
-  }
+      const response = await loginUser({
+        email: email.trim().toLowerCase(),
+        password: password,
+      });
 
+      Toast.show({
+        type: 'success',
+        text1: `Welcome, ${response.user?.name || ''}!`,
+        text2: 'Login successful',
+        position: 'top',
+      });
+
+      setTimeout(() => {
+        router.replace('/(tabs)');
+      }, 1000);
+    } catch (error: any) {
+      Toast.show({
+        type: 'error',
+        text1: 'Login failed',
+        text2: error.message || 'Failed to login',
+        position: 'top',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -69,36 +79,38 @@ export default function LoginScreen() {
       </View>
 
       <View style={styles.form}>
-
         <Text style={styles.label}>Email Address</Text>
         <View style={styles.inputWrapper}>
           <Ionicons name="mail-outline" size={20} color="#999" style={styles.inputIcon} />
-          <TextInput style={styles.textField} placeholderTextColor="#999" placeholder="Enter your email" keyboardType="email-address" autoCapitalize="none" />
+          <TextInput style={styles.textField} placeholderTextColor="#999" placeholder="Enter your email" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={setEmail}/>
         </View>
 
         <Text style={styles.label}>Password</Text>
         <View style={styles.inputWrapper}>
           <Ionicons name="lock-closed-outline" size={20} color="#999" style={styles.inputIcon} />
-          <TextInput style={styles.textField} placeholderTextColor="#999" placeholder="Enter your password" secureTextEntry={true} />
-          <TouchableOpacity style={styles.eyeIcon}>
-            <Ionicons name="eye-off-outline" size={20} color="#999" />
+          <TextInput style={styles.textField} placeholderTextColor="#999" placeholder="Enter your password" secureTextEntry={!showPassword} value={password} onChangeText={setPassword}/>
+          <TouchableOpacity style={styles.eyeIcon} onPress={()=> setShowPassword(!showPassword)}>
+            <Ionicons name={showPassword ? 'eye-outline' : 'eye-off-outline'} size={20} color="#999"/>
           </TouchableOpacity>
         </View>
 
         <View style={styles.rememberRow}>
           <View style={styles.rememberLeft}>
-            <Checkbox style={styles.checkbox} value={false} onValueChange={() => {}} />
+            <Checkbox style={styles.checkbox} value={isChecked} onValueChange={setIsChecked} color={isChecked ? '#007AFF' : undefined}/>
             <Text style={styles.rememberText}>Remember me</Text>
           </View>
           <TouchableOpacity>
             <Text style={styles.forgotText}>Forgot Password?</Text>
           </TouchableOpacity>
         </View>
-
       </View>
 
-      <TouchableOpacity style={styles.loginBtn} onPress={() => router.replace('/(tabs)')}>
-        <Text style={styles.loginBtnText}>LOGIN</Text>
+      <TouchableOpacity style={[styles.loginBtn, loading && styles.loginBtnDisabled]} disabled={loading} onPress={handleLogin}>
+        {loading ? (
+          <ActivityIndicator color="#fff" size="small" />
+        ) : (
+          <Text style={styles.loginBtnText}>LOGIN</Text>
+        )}
       </TouchableOpacity>
 
       <View style={styles.dividerRow}>
@@ -316,5 +328,8 @@ const styles = StyleSheet.create({
   googleImage:{
     width:21,
     height:20
-  }
+  },
+  loginBtnDisabled: {
+    opacity: 0.6,
+  },
 })
