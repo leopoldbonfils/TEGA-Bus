@@ -1,10 +1,6 @@
 import { Platform } from "react-native";
 
-export const BASE_URL = Platform.select({
-  android: 'http://192.168.1.242:5000/api',
-  ios: 'http://localhost:5000/api',
-  default: 'http://localhost:5000/api',
-});
+export const BASE_URL = 'https://tega-bus-backend.onrender.com/api';
 
 export interface RegisterPayLoad {
   name: string;
@@ -28,11 +24,32 @@ export const registerUser = async (Data: RegisterPayLoad) => {
   if (!response.ok) {
     const errorMessage = result.message || (result.errors && result.errors.length > 0 ? result.errors[0].message : 'Registration failed');
     throw new Error(errorMessage);
-
   }
 
   return result.data;
+};
 
-
+export interface LoginPayload {
+  email: string;
+  password: string;
 }
+
+export const loginUser = async (data: LoginPayload) => {
+  const response = await fetch(`${BASE_URL}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    const errorMessage =
+      result.message ||
+      (result.errors && result.errors.length > 0 ? result.errors[0].message : 'Login failed');
+    throw new Error(errorMessage);
+  }
+
+  return result.data;
+};
 
