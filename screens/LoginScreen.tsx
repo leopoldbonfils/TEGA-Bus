@@ -1,10 +1,63 @@
 import { View, Text, StyleSheet, Image, TextInput, TouchableOpacity } from 'react-native'
 import { Checkbox } from 'expo-checkbox';
-import React from 'react'
+import React, { useState } from 'react'
 import { router } from 'expo-router';
 import { Ionicons, FontAwesome,} from '@expo/vector-icons';
+import { registerUser } from '@/services/authService';
+import Toast from 'react-native-toast-message';
 
 export default function LoginScreen() {
+
+  const [email, setEmail] = useState ("");
+  const [password, setPassword]= useState("");
+  const [isChecked,setIsChecked] = useState(false);
+  const [loading,setLoading] = useState(false);
+  const [showPassword,setShowPassword] = useState(false);
+
+  const handleLogin = async()=>{
+    
+    if(!email.trim()){
+      Toast.show({
+        type:'error',
+        text1:'Email is required'
+      })
+    }
+    if(!password.trim()){
+      Toast.show({
+        type:'error',
+        text1:'Password is required'
+      })
+      return;
+
+    }
+
+    if(!/^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/.test(email)){
+      Toast.show({
+        type:'error',
+        text1:'Invalid email'
+      })
+      return;
+    }
+    if(!isChecked){
+      Toast.show({
+        type:'error',
+        text1:'You must agree to the terms and conditions'
+      })
+      return;
+    }
+    setLoading(true);
+
+
+
+    try {
+      
+      
+    } catch (error) {
+      
+    }
+  }
+
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
