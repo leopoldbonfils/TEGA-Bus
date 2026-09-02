@@ -1,5 +1,4 @@
-import { Redirect } from 'expo-router';
+import SplashScreen from '../screens/SplashScreen';
 
-export default function EntryPoint() {
-  return <Redirect href="/login" />;
-}
+export default SplashScreen;
+

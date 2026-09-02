@@ -1,16 +1,17 @@
-import {View,Text,Image,StyleSheet,SafeAreaView,TouchableOpacity, Dimensions,} from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import React, { useState } from 'react';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 const slides=[
   {
     id: '1',
     title: 'Find Your Route',
     description: 'Search destinations easily across Kigali and beyond with precise tracking.',
-    image: require('../assets/BusImage/image.png'),
+    image: require('../assets/BusImage/onboard1.jpg'),
     buttonText: 'NEXT',
     showArrow: true,
   },
@@ -19,7 +20,7 @@ const slides=[
     id: '2',
     title: 'Track Your Bus',
     description: 'See exactly where your bus is and get accurate arrival times.',
-    image: require('../assets/BusImage/image.png'),
+    image: require('../assets/BusImage/onBoard2.png'),
     buttonText: 'Next',
     showArrow: true,
   },
@@ -28,13 +29,14 @@ const slides=[
     id: '3',
     title: 'Travel With Confidence',
     description: 'Know your fare and route details before you even step outside.',
-    image: require('../assets/BusImage/image.png'),
+    image: require('../assets/BusImage/onboard3.jpg'),
     buttonText: 'GET STARTED',
     showArrow: true,
   },
 ];
 
 export default function OnboardingScreen() {
+  const insets = useSafeAreaInsets();
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const handleNext = () => {
@@ -53,8 +55,8 @@ export default function OnboardingScreen() {
   const isLastSlide = currentIndex === slides.length - 1;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.contentWrapper}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
+      <View style={[styles.contentWrapper, { paddingBottom: Math.max(insets.bottom, 16) + 20 }]}>
 
         <View style={styles.imageCardContainer}>
           <View style={styles.imageCard}>
@@ -88,7 +90,6 @@ export default function OnboardingScreen() {
           )}
         </View>
 
-
       </View>
     </SafeAreaView>
   );
@@ -102,13 +103,13 @@ const styles = StyleSheet.create({
   contentWrapper: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingTop: 40,
-    paddingBottom: 24,
+    paddingTop: 36,
     justifyContent: 'space-between',
   },
   imageCardContainer: {
     width: '100%',
-    height: width * 0.95,
+    height: Math.min(width * 0.78, height * 0.38),
+    marginTop: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
