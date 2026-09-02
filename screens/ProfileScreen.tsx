@@ -1,9 +1,11 @@
-import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
 import React from 'react';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
+import Toast from 'react-native-toast-message';
 import Headers from '@/components/Header';
+import { useAuth } from '@/context/AuthContext';
+
 const accountItems = [
   { icon: 'person-outline', label: 'Personal Info' },
   { icon: 'location-outline', label: 'Saved Locations' },
@@ -43,11 +45,36 @@ function ProfileRow({
 }
 
 export default function ProfileScreen() {
-  return (
+  const { user, logout } = useAuth();
 
-      <View style={styles.container}>
-        <Headers />
-      
+  const handleLogout = () => {
+    Alert.alert(
+      'Log Out',
+      'Are you sure you want to log out of your account?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Log Out',
+          style: 'destructive',
+          onPress: () => {
+            logout();
+            Toast.show({
+              type: 'success',
+              text1: 'Logged Out',
+              text2: 'You have been logged out successfully',
+              position: 'top',
+            });
+            router.replace('/login');
+          },
+        },
+      ]
+    );
+  };
+
+  return (
+    <View style={styles.container}>
+      <Headers />
+
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Avatar + name */}
         <View style={styles.profileInfo}>
@@ -57,8 +84,8 @@ export default function ProfileScreen() {
               <Ionicons name="pencil" size={12} color="#fff" />
             </TouchableOpacity>
           </View>
-          <Text style={styles.name}>Alex Murenzi</Text>
-          <Text style={styles.email}>alex@example.com</Text>
+          <Text style={styles.name}>{user?.name || 'User Profile'}</Text>
+          <Text style={styles.email}>{user?.email || 'No email provided'}</Text>
         </View>
 
         {/* Account section */}
@@ -75,13 +102,10 @@ export default function ProfileScreen() {
 
         {/* Logout */}
         <View style={styles.card}>
-          <ProfileRow icon="log-out-outline" label="Logout" danger showChevron={false} />
+          <ProfileRow icon="log-out-outline" label="Logout" danger showChevron={false} onPress={handleLogout} />
         </View>
       </ScrollView>
-
     </View>
-
-    
   );
 }
 

@@ -1,12 +1,154 @@
-import { View, Text, StyleSheet, Image, TextInput, TouchableOpacity, ScrollView } from 'react-native'
+import { View, Text, StyleSheet, Image, TextInput, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native'
 import { useState } from 'react';
 import { Checkbox } from 'expo-checkbox';
 import React from 'react'
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { registerUser } from '../services/authService';
+import Toast from 'react-native-toast-message';
 
 export default function RegisterScreen() {
-  const [isChecked, setChecked] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const[password, setPassword] = useState("");
+  const [isChecked, setIsChecked]=useState(false);
+  const [showPassword,setShowPassword]= useState(false);
+  const [loading, setLoading]= useState(false);
+
+
+  const handleRegister= async ()=>{
+  
+    if(!name.trim()){
+      Toast.show({
+        type:'error',
+        text1:'Full name is required',
+        text2:'Please enter your full name',
+        position:'top'
+        
+      })
+      return;
+    }
+    if(!email.trim()){
+      Toast.show({
+        type:'error',
+        text1:'Email is required',
+        text2:'Please enter your email',
+        position:'top',
+      })
+      return;
+    }
+    if(!phone.trim()){
+      Toast.show({
+        type:'error',
+        text1:'Phone number is required',
+        text2:'Please enter your phone number',
+        position:'top', 
+      })
+      return;
+    }
+    if(!password.trim()){
+      Toast.show({
+        type:'error',
+        text1:'Password is required',
+        text2:'Please enter your password',
+        position:'top',
+      })
+      return;
+    }
+
+    if (!isChecked){
+      Toast.show({
+        type:'error',
+        text1:'Terms and conditions',
+        text2:'Please agree to the terms and conditions',
+        position:'top',
+      })
+      return;
+    }
+
+    if (password.length < 8) {
+      Toast.show({
+        type: 'error',
+        text1: 'Password is too short',
+        text2: 'Password must be at least 8 characters',
+        position: 'top',
+      });
+      return;
+    }
+    if (!/[A-Z]/.test(password)){
+      Toast.show({
+        type:'error',
+        text1:'Password is too short',
+        text2:'Password must contain at least one uppercase letter',
+        position:'top',
+      })
+      return;
+    }
+    if (!/[a-z]/.test(password)){
+      Toast.show({
+        type:'error',
+        text1:'Password is too short',
+        text2:'Password must contain at least one lowercase letter',
+        position:'top',
+      })
+      return;
+    }
+    if (!/[0-9]/.test(password)){
+      Toast.show({
+        type:'error',
+        text1:'Password is too short',
+        text2:'Password must contain at least one number',
+        position:'top',
+      })
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/.test(email)){
+      Toast.show({
+        type:'error',
+        text1:'Invalid email',
+        text2:'Please enter a valid email',
+        position:'top',
+      })
+      return;
+    }
+
+    setLoading(true);
+
+    try{
+      await registerUser({
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        phone: phone.trim() || undefined,
+        password: password,
+          
+      });
+      Toast.show({
+        type:'success',
+        text1:'Registration successful',
+        text2:'Account created successfully',
+        position:'top',
+      });
+      setTimeout(()=>{
+        router.replace('/login')
+      },1200);
+      
+        
+    }catch(error:any){
+      Toast.show({
+        type:'error',
+        text1:'Registration failed',
+        text2:error.message || 'Failed to create account',
+        position:'top',
+      });
+
+    }finally{
+      setLoading(false);
+    }
+
+
+  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
@@ -21,40 +163,44 @@ export default function RegisterScreen() {
         <Text style={styles.label}> Full Name</Text>
         <View style={styles.inputWrapper}>
           <Ionicons name="person-outline" size={20} color="#999" style={styles.inputIcon} />
-          <TextInput style={styles.textField} placeholderTextColor="#999" placeholder='Enter Full Names' />
+          <TextInput style={styles.textField} placeholderTextColor="#999" placeholder='Enter Full Names' value={name} onChangeText={setName} />
         </View>
 
         <Text style={styles.label}>Email Address</Text>
         <View style={styles.inputWrapper}>
-          <Ionicons name="mail-outline" size={20} color="#999" style={styles.inputIcon} />
-          <TextInput style={styles.textField} placeholderTextColor="#999" placeholder="Enter your email" keyboardType="email-address" autoCapitalize="none" />
+          <Ionicons name="mail-outline" size={20} color="#999" style={styles.inputIcon} autoCapitalize="none" />
+          <TextInput style={styles.textField} placeholderTextColor="#999" placeholder="Enter your email" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={setEmail}/>
         </View>
         
         <Text style={styles.label}>Phone Number</Text>
         <View style={styles.inputWrapper}>
           <Feather name="phone" size={20} color="#999" style={styles.inputIcon} />
-          <TextInput style={styles.textField} placeholderTextColor="#999" placeholder='Enter Phone Number' />
+          <TextInput style={styles.textField} placeholderTextColor="#999" placeholder='Enter Phone Number' value={phone} onChangeText={setPhone} />
 
         </View>
 
         <Text style={styles.label}>Password</Text>
         <View style={styles.inputWrapper}>
           <Ionicons name="lock-closed-outline" size={20} color="#999" style={styles.inputIcon} />
-          <TextInput style={styles.textField} placeholderTextColor="#999" placeholder="Enter your password" secureTextEntry={true} />
-          <TouchableOpacity style={styles.eyeIcon}>
-            <Ionicons name="eye-off-outline" size={20} color="#999" />
+          <TextInput style={styles.textField} placeholderTextColor="#999" placeholder="Enter your password, 8+ chars, 1 uppercase, 1 number, 1 special character" secureTextEntry={!showPassword} value={password} onChangeText={setPassword} />
+          <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowPassword(!showPassword)}>
+            <Ionicons name={showPassword ? "eye-outline" : "eye-off-outline"} size={20} color="#999" />
           </TouchableOpacity>
         </View>
         
       </View>
 
       <View style={styles.termRow}>
-        <Checkbox style={styles.checkbox} value={isChecked} onValueChange={setChecked} />
+        <Checkbox style={styles.checkbox} value={isChecked} onValueChange={setIsChecked} color={isChecked ? '#007AFF' : undefined} />
         <Text>I agree to the term & Condition</Text>
       </View>
 
-      <TouchableOpacity style={styles.registerBtn} onPress={() => router.replace('/(tabs)')}>
+      <TouchableOpacity style={[styles.registerBtn, loading && styles.btnDisabled]} disabled={loading} onPress={handleRegister}>
+        { loading ? (
+        <ActivityIndicator color="#fff" />
+        ):(
         <Text style={styles.btn}>Register</Text>
+        )}
       </TouchableOpacity>
 
       <View style={styles.dividerRow}>
@@ -75,9 +221,7 @@ export default function RegisterScreen() {
       </View>
 
       <TouchableOpacity onPress={() => router.push('/login')}>
-        <Text style={styles.footerText}>
-          Already have an account? <Text style={styles.linkText}>Login</Text>
-        </Text>
+        <Text style={styles.footerText}>Already have an account? <Text style={styles.linkText}>Login</Text></Text>
       </TouchableOpacity>
 
     </ScrollView>
@@ -221,5 +365,8 @@ const styles = StyleSheet.create({
    googleImage:{
     width:18,
     height:18
+  },
+  btnDisabled:{
+    opacity:0.7,
   },
 });
