@@ -1,11 +1,15 @@
 import {View,Text,StyleSheet,TouchableOpacity,ScrollView} from 'react-native';
 import React from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import Header from '../components/Header';
 
 export default function NotificationsScreen() {
 
   return (
-  <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+   <View style={styles.container}>
+      <Header/> 
+      
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
   <Text style={styles.title}>Notifications</Text>
   <Text style={styles.sectionTitle}>Today</Text>
   <View style={styles.alertCard}>
@@ -162,17 +166,18 @@ export default function NotificationsScreen() {
         </View>
 
       </View>
-
-    </ScrollView>
+ </ScrollView>
+    </View>
   );
 }
-
-
 const styles = StyleSheet.create({
 
   container: {
     flex: 1,
     backgroundColor: '#F7F8FC',
+  },
+  scrollView: {
+    flex: 1,
   },
 
   scrollContent: {
@@ -186,7 +191,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#0B2F55',
     marginBottom: 35,
-    marginTop: 49,
+    marginTop: 10,
   },
 
   sectionTitle: {

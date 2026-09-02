@@ -1,16 +1,17 @@
 import { View,Text,StyleSheet,TouchableOpacity,ScrollView,} from 'react-native';
 import { useState } from 'react';
-//import React from 'react';
+import React from 'react';
 import { Ionicons } from '@expo/vector-icons';
-
+import Header from '../components/Header';
 export default function TripsScreen() {
   const [activeTab, setActiveTab] = useState('completed');
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-      <Text style={styles.title}>
-        My Trips
-      </Text>
+    <View style={styles.container}>
+    <Header/> 
+    
+    <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <Text style={styles.title}>My Trips</Text>
 
       <View style={styles.tabRow}>
 
@@ -160,7 +161,8 @@ export default function TripsScreen() {
 
       </View>
 
-    </ScrollView>
+  </ScrollView>
+    </View>
   );
 }
 
@@ -169,6 +171,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F7F8FC',
+  },
+  scrollView: {
+    flex: 1,
   },
 
   scrollContent: {
@@ -182,7 +187,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#0B2F55',
     marginBottom: 20,
-    marginTop: 49,
+    marginTop:10,
   },
 
   tabRow: {
