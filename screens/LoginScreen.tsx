@@ -48,7 +48,7 @@ export default function LoginScreen() {
         password: password,
       });
 
-      // Save user in context
+      // ....Save user in context.....
       if (response.user) {
         login(response.user, response.token);
       }
