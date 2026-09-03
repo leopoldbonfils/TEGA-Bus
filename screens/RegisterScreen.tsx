@@ -1,20 +1,102 @@
 import { View, Text, StyleSheet, Image, TextInput, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native'
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Checkbox } from 'expo-checkbox';
 import React from 'react'
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { registerUser } from '../services/authService';
 import Toast from 'react-native-toast-message';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+import * as AppleAuthentication from 'expo-apple-authentication';
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function RegisterScreen() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const[password, setPassword] = useState("");
+  const [password, setPassword] = useState("");
   const [isChecked, setIsChecked]=useState(false);
   const [showPassword,setShowPassword]= useState(false);
   const [loading, setLoading]= useState(false);
+
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    webClientId: '1088153516882-jub92ho1phia1ombjlpio105hoda5fou.apps.googleusercontent.com',
+    androidClientId: '1088153516882-h79vhjmlrd87enpbg0kbkvvi2tcv2dr4.apps.googleusercontent.com',
+  });
+
+
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { authentication } = response;
+      if (authentication?.accessToken) {
+        fetchGoogleUser(authentication.accessToken);
+      }
+    }
+  }, [response]);
+
+  const fetchGoogleUser = async (token: string) => {
+    try {
+      const res = await fetch('https://www.googleapis.com/userinfo/v2/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const user = await res.json();
+      Toast.show({
+        type: 'success',
+        text1: 'Google Sign-In',
+        text2: `Welcome ${user.name || user.email}!`,
+        position: 'top',
+      });
+      router.replace('/(tabs)');
+    } catch (error: any) {
+      Toast.show({
+        type: 'error',
+        text1: 'Google Sign-In Error',
+        text2: error.message || 'Failed to fetch Google profile',
+        position: 'top',
+      });
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    try {
+      const isAvailable = await AppleAuthentication.isAvailableAsync();
+      if (!isAvailable) {
+        Toast.show({
+          type: 'error',
+          text1: 'Not Available',
+          text2: 'Apple Sign-In is only available on iOS devices',
+          position: 'top',
+        });
+        return;
+      }
+
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      Toast.show({
+        type: 'success',
+        text1: 'Apple Sign-In',
+        text2: 'Welcome to TEGA Bus!',
+        position: 'top',
+      });
+      router.replace('/(tabs)');
+    } catch (e: any) {
+      if (e.code !== 'ERR_REQUEST_CANCELED') {
+        Toast.show({
+          type: 'error',
+          text1: 'Apple Sign-In Failed',
+          text2: e.message || 'Authentication failed',
+          position: 'top',
+        });
+      }
+    }
+  };
 
 
   const handleRegister= async ()=>{
@@ -210,11 +292,11 @@ export default function RegisterScreen() {
       </View>
 
       <View style={styles.socialRow}>
-        <TouchableOpacity style={styles.socialButton}>
+        <TouchableOpacity style={styles.socialButton} onPress={() => promptAsync()} activeOpacity={0.7}>
           <Image source={require('../assets/BusImage/google.png')} style={styles.googleImage}/>
           <Text style={styles.socialText}>Google</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.socialButton}>
+        <TouchableOpacity style={styles.socialButton} onPress={handleAppleSignIn} activeOpacity={0.7}>
           <Ionicons name="logo-apple" size={18} color="#000" />
           <Text style={styles.socialText}>Apple</Text>
         </TouchableOpacity>

@@ -1,50 +1,33 @@
-# Welcome to your Expo app 👋
+# 🚌 TEGA Bus - Mobile Application
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+TEGA Bus is a modern public transit mobile application for Kigali and beyond. It allows passengers to search routes, track buses in real-time, view schedules, check fares, and receive live updates.
 
-## Get started
+---
 
-1. Install dependencies
+##  Tech Stack
 
-   ```bash
-   npm install
-   ```
+- **Framework**: [React Native](https://reactnative.dev/) with [Expo](https://expo.dev/) (SDK 54)
+- **Routing**: [Expo Router](https://docs.expo.dev/router/introduction/) (File-based Typed Routes)
+- **Language**: TypeScript
+- **State & Context**: React Context API (`AuthContext`)
+- **Maps**: `react-native-maps`
+- **Authentication**: Email/Password, Google Sign-In (`expo-auth-session`), Apple Sign-In (`expo-apple-authentication`)
+- **UI & Icons**: `@expo/vector-icons` (Ionicons, Feather, FontAwesome), `react-native-safe-area-context`
+- **Notifications & Feedback**: `react-native-toast-message`
 
-2. Start the app
+---
 
-   ```bash
-   npx expo start
-   ```
+## ✨ Features
 
-In the output, you'll find options to open the app in a
+- 🌟 **Animated Splash Screen**: Smooth branded entry animation with automatic route resolution.
+- 📱 **Interactive Onboarding**: Multi-step guide for first-time users (Find Your Route, Track Your Bus, Travel With Confidence).
+- 🔐 **Authentication**: Register and Login with input validation, Google Sign-In, and Apple Sign-In support.
+- 🗺️ **Live Map & Bus Tracking**: Interactive map displaying bus routes, live driver locations, and stops.
+- 📋 **Trip Planner**: Search origins and destinations, calculate fares, and view estimated arrival times (ETA).
+- 🔔 **Notifications**: Real-time transit alerts and updates.
+- 👤 **User Profile**: Account management and ride history.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+---
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## 📁 Project Structure
 
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
