@@ -1,10 +1,9 @@
-import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { router } from 'expo-router';
-import Toast from 'react-native-toast-message';
 import Headers from '@/components/Header';
 import { useAuth } from '@/context/AuthContext';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Toast from 'react-native-toast-message';
 
 const accountItems = [
   { icon: 'person-outline', label: 'Personal Info' },
@@ -15,6 +14,7 @@ const accountItems = [
 ];
 
 const settingsItems = [
+  { icon: 'settings-outline', label: 'Settings' },
   { icon: 'notifications-outline', label: 'Notification Settings' },
   { icon: 'shield-outline', label: 'Privacy' },
   { icon: 'help-circle-outline', label: 'Help & Support' },
@@ -90,13 +90,29 @@ export default function ProfileScreen() {
 
         {/* Account section */}
         <View style={styles.card}>
-          {accountItems.map((item, index) => (
-            <ProfileRow key={item.label} icon={item.icon} label={item.label} />
+          {accountItems.map((item) => (
+            <ProfileRow
+              key={item.label}
+              icon={item.icon}
+              label={item.label}
+              onPress={
+                item.label === 'Saved Locations'
+                  ? () => router.push('/saved-locations')
+                  : item.label === 'Payment Methods'
+                    ? () => router.push('/payment')
+                    : undefined
+              }
+            />
           ))}
         </View>
         <View style={styles.card}>
           {settingsItems.map((item) => (
-            <ProfileRow key={item.label} icon={item.icon} label={item.label} />
+            <ProfileRow
+              key={item.label}
+              icon={item.icon}
+              label={item.label}
+              onPress={item.label === 'Settings' || item.label === 'Notification Settings' ? () => router.push('/settings') : undefined}
+            />
           ))}
         </View>
 

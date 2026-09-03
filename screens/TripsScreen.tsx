@@ -1,7 +1,7 @@
-import { View,Text,StyleSheet,TouchableOpacity,ScrollView,} from 'react-native';
-import { useState } from 'react';
-import React from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, } from 'react-native';
 import Header from '../components/Header';
 export default function TripsScreen() {
   const [activeTab, setActiveTab] = useState('completed');
@@ -48,7 +48,7 @@ export default function TripsScreen() {
         CURRENT JOURNEY
       </Text>
 
-      <View style={styles.journeyCard}>
+      <TouchableOpacity style={styles.journeyCard} activeOpacity={0.85} onPress={() => router.push('/trip-details')}>
 
         <View style={styles.greenBar} />
 
@@ -87,12 +87,12 @@ export default function TripsScreen() {
 
         </View>
 
-      </View>
+      </TouchableOpacity>
 
       <Text style={styles.sectionTitle}>
         HISTORY
       </Text>
-      <View style={styles.historyCard}>
+      <TouchableOpacity style={styles.historyCard} activeOpacity={0.85} onPress={() => router.push('/trip-details')}>
 
         <View style={styles.historyHeader}>
           <Text style={styles.historyDate}>Today, 08:15 AM</Text>
@@ -113,9 +113,9 @@ export default function TripsScreen() {
           <Text style={styles.priceText}>RWF 500</Text>
         </View>
 
-      </View>
+      </TouchableOpacity>
 
-      <View style={styles.historyCard}>
+      <TouchableOpacity style={styles.historyCard} activeOpacity={0.85} onPress={() => router.push('/trip-details')}>
 
         <View style={styles.historyHeader}>
           <Text style={styles.historyDate}>Yesterday, 17:45 PM</Text>
@@ -136,9 +136,9 @@ export default function TripsScreen() {
           <Text style={styles.priceText}>RWF 500</Text>
         </View>
 
-      </View>
+      </TouchableOpacity>
 
-      <View style={styles.historyCard}>
+      <TouchableOpacity style={styles.historyCard} activeOpacity={0.85} onPress={() => router.push('/trip-details')}>
 
         <View style={styles.historyHeader}>
           <Text style={styles.historyDate}>Oct 24, 09:00 AM</Text>
@@ -159,7 +159,7 @@ export default function TripsScreen() {
           <Text style={styles.priceText}>RWF 450</Text>
         </View>
 
-      </View>
+      </TouchableOpacity>
 
   </ScrollView>
     </View>
