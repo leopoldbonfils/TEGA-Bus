@@ -280,7 +280,6 @@ const buildMapHtml = (backendUrl: string, waypointsJson: string): string => `<!D
 
     renderStaticRoutes();
 
-    // ── Geodesic & Road Animation Math Helpers ──────────────────────────
     function distSq(p1, p2) {
       var dlat = p1[0] - p2[0];
       var dlng = p1[1] - p2[1];
@@ -308,9 +307,9 @@ const buildMapHtml = (backendUrl: string, waypointsJson: string): string => `<!D
       return (brng + 360) % 360;
     }
 
-    function lerpAngle(a, b, t) {
-      var diff = ((b - a + 540) % 360) - 180;
-      return (a + diff * t + 360) % 360;
+    function lerpAngle(from, to, t) {
+      var diff = ((to - from + 540) % 360) - 180;
+      return (from + diff * t + 360) % 360;
     }
 
     function getWaypointLatLng(wp) {
@@ -319,68 +318,157 @@ const buildMapHtml = (backendUrl: string, waypointsJson: string): string => `<!D
       return [wp.latitude, wp.longitude];
     }
 
-    // ── Build road sub-path between two GPS coordinates using actual road geometry ──
-    function buildRoadPath(busId, routeNum, fromPos, toPos) {
-      var waypoints = null;
+    var routeMetricsCache = {};
+
+    function getRouteWaypoints(busId, routeNum) {
       if (busId && dynamicRoutesCoords[busId] && dynamicRoutesCoords[busId].length >= 2) {
-        waypoints = dynamicRoutesCoords[busId];
-      } else if (routeNum && INITIAL_ROUTES && INITIAL_ROUTES[routeNum] && INITIAL_ROUTES[routeNum].length >= 2) {
-        waypoints = INITIAL_ROUTES[routeNum];
+        return dynamicRoutesCoords[busId];
       }
-
-      if (!waypoints || waypoints.length < 2) {
-        return [fromPos, toPos];
+      if (routeNum && INITIAL_ROUTES && INITIAL_ROUTES[routeNum] && INITIAL_ROUTES[routeNum].length >= 2) {
+        return INITIAL_ROUTES[routeNum];
       }
-
-      var bestFromIdx = -1, bestFromDist = Infinity;
-      var bestToIdx = -1, bestToDist = Infinity;
-
-      for (var i = 0; i < waypoints.length; i++) {
-        var wp = getWaypointLatLng(waypoints[i]);
-        var df = distSq(fromPos, wp);
-        if (df < bestFromDist) {
-          bestFromDist = df;
-          bestFromIdx = i;
-        }
-        var dt = distSq(toPos, wp);
-        if (dt < bestToDist) {
-          bestToDist = dt;
-          bestToIdx = i;
-        }
-      }
-
-      if (bestFromDist > 0.00015 || bestToDist > 0.00015 || bestFromIdx === -1 || bestToIdx === -1) {
-        return [fromPos, toPos];
-      }
-
-      if (Math.abs(bestToIdx - bestFromIdx) > 100) {
-        return [fromPos, toPos];
-      }
-
-      var path = [fromPos];
-      if (bestToIdx >= bestFromIdx) {
-        for (var j = bestFromIdx; j <= bestToIdx; j++) {
-          path.push(getWaypointLatLng(waypoints[j]));
-        }
-      } else {
-        for (var j = bestFromIdx; j >= bestToIdx; j--) {
-          path.push(getWaypointLatLng(waypoints[j]));
-        }
-      }
-      path.push(toPos);
-
-      var cleanPath = [path[0]];
-      for (var k = 1; k < path.length; k++) {
-        if (getDistanceMeters(cleanPath[cleanPath.length - 1], path[k]) > 0.5) {
-          cleanPath.push(path[k]);
-        }
-      }
-
-      return cleanPath.length >= 2 ? cleanPath : [fromPos, toPos];
+      return null;
     }
 
-    // ── Continuous smooth animation along road geometry ──────────────────
-    function animateBusAlongPath(busId, path, startHeading, targetHeading, durationMs) {
+    function getRouteMetrics(busId, routeNum) {
+      var key = (busId && dynamicRoutesCoords[busId]) ? ('live_' + busId) : ('static_' + routeNum);
+      if (routeMetricsCache[key]) {
+        return routeMetricsCache[key];
+      }
+
+      var raw = getRouteWaypoints(busId, routeNum);
+      if (!raw || raw.length < 2) return null;
+
+      var wps = [];
+      for (var i = 0; i < raw.length; i++) {
+        wps.push(getWaypointLatLng(raw[i]));
+      }
+
+      var cumDists = [0];
+      var total = 0;
+      for (var j = 0; j < wps.length - 1; j++) {
+        var d = getDistanceMeters(wps[j], wps[j + 1]);
+        total += d;
+        cumDists.push(total);
+      }
+
+      var metrics = {
+        waypoints: wps,
+        cumDists: cumDists,
+        totalDist: total
+      };
+      routeMetricsCache[key] = metrics;
+      return metrics;
+    }
+
+    function findSegmentIndex(cumDists, dist) {
+      var low = 0;
+      var high = cumDists.length - 2;
+      while (low <= high) {
+        var mid = (low + high) >> 1;
+        if (cumDists[mid + 1] < dist) {
+          low = mid + 1;
+        } else if (cumDists[mid] > dist) {
+          high = mid - 1;
+        } else {
+          return mid;
+        }
+      }
+      return Math.max(0, Math.min(cumDists.length - 2, low));
+    }
+
+    function getPositionAtRouteDist(metrics, dist) {
+      var wps = metrics.waypoints;
+      var cumDists = metrics.cumDists;
+      var total = metrics.totalDist;
+
+      var clamped = Math.max(0, Math.min(dist, total));
+      var i = findSegmentIndex(cumDists, clamped);
+      var p1 = wps[i];
+      var p2 = wps[Math.min(wps.length - 1, i + 1)];
+
+      var segStart = cumDists[i];
+      var segEnd = cumDists[Math.min(cumDists.length - 1, i + 1)];
+      var segLen = segEnd - segStart;
+
+      var frac = segLen > 0 ? (clamped - segStart) / segLen : 0;
+      frac = Math.max(0, Math.min(1, frac));
+
+      return [
+        p1[0] + (p2[0] - p1[0]) * frac,
+        p1[1] + (p2[1] - p1[1]) * frac
+      ];
+    }
+
+    function getRoadHeadingAtRouteDist(metrics, dist) {
+      var total = metrics.totalDist;
+      var cur = getPositionAtRouteDist(metrics, dist);
+
+      var lookaheadDist = Math.min(dist + 15, total);
+      if (lookaheadDist <= dist + 0.5) {
+        var prevDist = Math.max(0, dist - 5);
+        var prev = getPositionAtRouteDist(metrics, prevDist);
+        return getBearing(prev, cur);
+      }
+
+      var ahead = getPositionAtRouteDist(metrics, lookaheadDist);
+      return getBearing(cur, ahead);
+    }
+
+    function projectGpsToRouteDist(metrics, point, hintDist) {
+      var wps = metrics.waypoints;
+      var cumDists = metrics.cumDists;
+      var N = wps.length;
+
+      var bestDist = 0;
+      var bestDistSq = Infinity;
+
+      var startI = 0;
+      var endI = N - 1;
+
+      if (typeof hintDist === 'number' && hintDist >= 0) {
+        var approxI = findSegmentIndex(cumDists, hintDist);
+        startI = Math.max(0, approxI - 5);
+        endI = Math.min(N - 1, approxI + 45);
+      }
+
+      function search(fromI, toI) {
+        for (var i = fromI; i < toI; i++) {
+          var p1 = wps[i];
+          var p2 = wps[i + 1];
+
+          var dx = p2[0] - p1[0];
+          var dy = p2[1] - p1[1];
+          var segLenSq = dx * dx + dy * dy;
+
+          var t = 0;
+          if (segLenSq > 0) {
+            t = ((point[0] - p1[0]) * dx + (point[1] - p1[1]) * dy) / segLenSq;
+            t = Math.max(0, Math.min(1, t));
+          }
+
+          var projLat = p1[0] + t * dx;
+          var projLng = p1[1] + t * dy;
+          var dsq = distSq(point, [projLat, projLng]);
+
+          if (dsq < bestDistSq) {
+            bestDistSq = dsq;
+            var segMeters = cumDists[i + 1] - cumDists[i];
+            bestDist = cumDists[i] + t * segMeters;
+          }
+        }
+      }
+
+      search(startI, endI);
+
+      if (bestDistSq > 0.00015 && (startI > 0 || endI < N - 1)) {
+        search(0, N - 1);
+      }
+
+      return bestDist;
+    }
+
+    function animateBusAlongRoad(busId, metrics, fromDist, toDist, durationMs) {
       var state = busAnimState[busId];
       var marker = busMarkers[busId];
       if (!state || !marker) return;
@@ -390,60 +478,36 @@ const buildMapHtml = (backendUrl: string, waypointsJson: string): string => `<!D
         state.animId = null;
       }
 
-      var segLengths = [];
-      var totalDist = 0;
-      for (var i = 0; i < path.length - 1; i++) {
-        var len = getDistanceMeters(path[i], path[i + 1]);
-        segLengths.push(len);
-        totalDist += len;
-      }
-
-      if (totalDist < 0.3) {
-        state.currentPos = path[path.length - 1];
-        marker.setLatLng(state.currentPos);
+      var delta = toDist - fromDist;
+      if (delta <= 0.2) {
+        state.currentDist = toDist;
+        var p = getPositionAtRouteDist(metrics, toDist);
+        marker.setLatLng(p);
         return;
       }
 
-      var duration = Math.max(1000, Math.min(durationMs || 2000, 4500));
+      var duration = Math.max(1200, Math.min(durationMs || 2000, 4000));
       var startTime = performance.now();
 
       function frame(now) {
         var elapsed = now - startTime;
         var t = Math.min(elapsed / duration, 1.0);
 
-        var currentDist = t * totalDist;
+        var currentD = fromDist + t * delta;
+        state.currentDist = currentD;
 
-        var accum = 0;
-        var currentLat = path[path.length - 1][0];
-        var currentLng = path[path.length - 1][1];
-        var segBearing = targetHeading;
-
-        for (var s = 0; s < segLengths.length; s++) {
-          var segLen = segLengths[s];
-          if (currentDist <= accum + segLen || s === segLengths.length - 1) {
-            var frac = segLen > 0 ? (currentDist - accum) / segLen : 1;
-            frac = Math.max(0, Math.min(1, frac));
-
-            currentLat = path[s][0] + (path[s + 1][0] - path[s][0]) * frac;
-            currentLng = path[s][1] + (path[s + 1][1] - path[s][1]) * frac;
-            segBearing = getBearing(path[s], path[s + 1]);
-            break;
-          }
-          accum += segLen;
-        }
-
-        var pos = [currentLat, currentLng];
-        state.currentPos = pos;
+        var pos = getPositionAtRouteDist(metrics, currentD);
         marker.setLatLng(pos);
 
-        var currentHeading = lerpAngle(state.currentHeading, segBearing, 0.18);
-        state.currentHeading = currentHeading;
+        var targetRoadAngle = getRoadHeadingAtRouteDist(metrics, currentD);
+        var smoothHeading = lerpAngle(state.currentHeading, targetRoadAngle, 0.12);
+        state.currentHeading = smoothHeading;
 
         var el = marker.getElement();
         if (el) {
           var veh = el.querySelector('.tega-bus-vehicle');
           if (veh) {
-            veh.style.transform = 'rotate(' + currentHeading.toFixed(1) + 'deg)';
+            veh.style.transform = 'rotate(' + smoothHeading.toFixed(1) + 'deg)';
           }
         }
 
@@ -451,45 +515,41 @@ const buildMapHtml = (backendUrl: string, waypointsJson: string): string => `<!D
           state.animId = requestAnimationFrame(frame);
         } else {
           state.animId = null;
-          state.currentPos = path[path.length - 1];
-          marker.setLatLng(state.currentPos);
-          if (targetHeading != null) {
-            state.currentHeading = targetHeading;
-            var elFinal = marker.getElement();
-            if (elFinal) {
-              var vehFinal = elFinal.querySelector('.tega-bus-vehicle');
-              if (vehFinal) {
-                vehFinal.style.transform = 'rotate(' + targetHeading.toFixed(1) + 'deg)';
-              }
-            }
-          }
+          state.currentDist = toDist;
+          var finalPos = getPositionAtRouteDist(metrics, toDist);
+          marker.setLatLng(finalPos);
         }
       }
 
       state.animId = requestAnimationFrame(frame);
     }
 
-    //  Update or create bus marker with continuous smooth interpolation 
     function updateBus(d) {
       var id = d.busId;
-      var targetPos = [d.latitude, d.longitude];
+      var rawTargetPos = [d.latitude, d.longitude];
       var color = getColor(d.routeNumber, d.routeColor);
-      var targetHeading = d.heading != null ? d.heading : 0;
       var now = performance.now();
 
+      var metrics = getRouteMetrics(id, d.routeNumber);
       var state = busAnimState[id];
+
       if (!state) {
+        var startDist = metrics ? projectGpsToRouteDist(metrics, rawTargetPos, 0) : 0;
+        var startPos = metrics ? getPositionAtRouteDist(metrics, startDist) : rawTargetPos;
+        var initialHeading = metrics ? getRoadHeadingAtRouteDist(metrics, startDist) : (d.heading || 0);
+
         state = {
-          currentPos: targetPos,
-          currentHeading: targetHeading,
+          currentDist: startDist,
+          currentPos: startPos,
+          currentHeading: initialHeading,
           lastUpdateTimestamp: now,
           estimatedInterval: 2000,
           animId: null
         };
         busAnimState[id] = state;
 
-        var icon = makeBusIcon(d.busNumber, d.routeNumber, color, targetHeading);
-        var m = L.marker(targetPos, { icon: icon, zIndexOffset: 1000 }).addTo(map);
+        var icon = makeBusIcon(d.busNumber, d.routeNumber, color, initialHeading);
+        var m = L.marker(startPos, { icon: icon, zIndexOffset: 1000 }).addTo(map);
         m.on('click', function() {
           followBusId = id;
           postRN({ type: 'busSelected', busId: id });
@@ -504,29 +564,35 @@ const buildMapHtml = (backendUrl: string, waypointsJson: string): string => `<!D
       }
       state.lastUpdateTimestamp = now;
 
-      var fromPos = state.currentPos;
-      var fromHeading = state.currentHeading;
-
-      var dist = getDistanceMeters(fromPos, targetPos);
-      if (dist < 0.4) {
+      if (!metrics || metrics.waypoints.length < 2) {
         return;
       }
 
-      if (dist > 4000) {
+      var targetDist = projectGpsToRouteDist(metrics, rawTargetPos, state.currentDist);
+
+      var isLoopRestart = (state.currentDist > metrics.totalDist * 0.82 && targetDist < metrics.totalDist * 0.15);
+      if (isLoopRestart) {
         if (state.animId) cancelAnimationFrame(state.animId);
-        state.currentPos = targetPos;
-        state.currentHeading = targetHeading;
-        busMarkers[id].setLatLng(targetPos);
-        var el = busMarkers[id].getElement();
-        if (el) {
-          var veh = el.querySelector('.tega-bus-vehicle');
-          if (veh) veh.style.transform = 'rotate(' + targetHeading + 'deg)';
+        state.currentDist = targetDist;
+        var loopPos = getPositionAtRouteDist(metrics, targetDist);
+        var loopHeading = getRoadHeadingAtRouteDist(metrics, targetDist);
+        state.currentHeading = loopHeading;
+        busMarkers[id].setLatLng(loopPos);
+        var elLoop = busMarkers[id].getElement();
+        if (elLoop) {
+          var vLoop = elLoop.querySelector('.tega-bus-vehicle');
+          if (vLoop) vLoop.style.transform = 'rotate(' + loopHeading.toFixed(1) + 'deg)';
         }
         return;
       }
 
-      var roadPath = buildRoadPath(id, d.routeNumber, fromPos, targetPos);
-      animateBusAlongPath(id, roadPath, fromHeading, targetHeading, state.estimatedInterval);
+      var forwardDelta = targetDist - state.currentDist;
+      if (forwardDelta <= 0.4) {
+        return; 
+      }
+
+      var fromDist = state.currentDist;
+      animateBusAlongRoad(id, metrics, fromDist, targetDist, state.estimatedInterval);
 
       if (d.routeNumber && staticRoutes[d.routeNumber]) {
         staticRoutes[d.routeNumber].poly.bringToFront();
@@ -534,11 +600,11 @@ const buildMapHtml = (backendUrl: string, waypointsJson: string): string => `<!D
 
       if (isFollowing && (followBusId === id || !followBusId)) {
         followBusId = id;
-        map.panTo(targetPos, { animate: true, duration: (state.estimatedInterval / 1000) * 0.95 });
+        var forwardPos = getPositionAtRouteDist(metrics, targetDist);
+        map.panTo(forwardPos, { animate: true, duration: (state.estimatedInterval / 1000) * 0.95 });
       }
     }
 
-    //  Live OSRM road geometry from backend 
     function drawRoute(d) {
       var id = d.busId;
       var color = getColor(d.routeNumber, d.routeColor);
