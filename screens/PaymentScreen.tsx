@@ -7,8 +7,9 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
-export default function PaymentScreen({ navigation }: any) {
+export default function PaymentScreen() {
   const [selectedMethod, setSelectedMethod] = useState('mobile');
 
   return (
@@ -16,7 +17,7 @@ export default function PaymentScreen({ navigation }: any) {
 
       {/* Payment Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={28} color="#14283F" />
         </TouchableOpacity>
 
@@ -213,7 +214,7 @@ export default function PaymentScreen({ navigation }: any) {
       </ScrollView>
       <View style={styles.bottomContainer}>
 
-        <TouchableOpacity style={styles.payButton}>
+        <TouchableOpacity style={styles.payButton} onPress={() => router.replace('/trip-details')}>
 
           <Text style={styles.payButtonText}>
             Pay & Continue

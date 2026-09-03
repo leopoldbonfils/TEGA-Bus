@@ -1,12 +1,8 @@
 import React, { useRef, useEffect } from 'react';
 import { Animated, View, Text, StyleSheet, Image, StatusBar,} from 'react-native';
 import {router} from 'expo-router';
-
-
 export default function SplashScreen() {
-
-  const fadeAmin = useRef(new Animated.Value(0)).current;
-
+ const fadeAmin = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.timing(fadeAmin, {
       toValue: 1,
