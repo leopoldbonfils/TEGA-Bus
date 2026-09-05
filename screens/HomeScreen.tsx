@@ -1,11 +1,108 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import {Ionicons,MaterialIcons,MaterialCommunityIcons,FontAwesome5,} from '@expo/vector-icons';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { Ionicons, MaterialIcons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import * as Location from 'expo-location';
 import Header from '../components/Header';
+import { getNearbyStops, getActiveBuses, NearbyStop, ActiveBus } from '../services/busService';
+
+const FALLBACK_LAT = -1.9400;
+const FALLBACK_LNG = 30.1200;
+const FALLBACK_LOCATION_NAME = 'Kimironko';
 
 export default function HomeScreen() {
+  const [locationName, setLocationName] = useState<string>(FALLBACK_LOCATION_NAME);
+  const [coords, setCoords] = useState<{ latitude: number; longitude: number }>({
+    latitude: FALLBACK_LAT,
+    longitude: FALLBACK_LNG,
+  });
+  const [nearbyStop, setNearbyStop] = useState<NearbyStop | null>(null);
+  const [activeBuses, setActiveBuses] = useState<ActiveBus[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchTransportData = useCallback(async (lat: number, lng: number) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [stops, buses] = await Promise.all([
+        getNearbyStops(lat, lng).catch(() => null),
+        getActiveBuses().catch(() => null),
+      ]);
+
+      if (stops && stops.length > 0) {
+        setNearbyStop(stops[0]);
+      }
+
+      if (buses && buses.length > 0) {
+        setActiveBuses(buses);
+      }
+
+      if (!stops && !buses) {
+        setError('Unable to load nearby buses.');
+      }
+    } catch {
+      setError('Unable to load nearby buses.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const initLocationAndData = useCallback(async () => {
+    let lat = FALLBACK_LAT;
+    let lng = FALLBACK_LNG;
+    let locName = FALLBACK_LOCATION_NAME;
+
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const position = await Promise.race([
+          Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000)),
+        ]);
+
+        if (position && position.coords) {
+          lat = position.coords.latitude;
+          lng = position.coords.longitude;
+
+          try {
+            const reverse = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
+            if (reverse && reverse.length > 0) {
+              const place = reverse[0];
+              locName = place.district || place.subregion || place.city || place.name || FALLBACK_LOCATION_NAME;
+            }
+          } catch {
+            locName = FALLBACK_LOCATION_NAME;
+          }
+        }
+      }
+    } catch {
+      // Fallback location is safely preserved
+    }
+
+    setLocationName(locName);
+    setCoords({ latitude: lat, longitude: lng });
+    await fetchTransportData(lat, lng);
+  }, [fetchTransportData]);
+
+  useEffect(() => {
+    initLocationAndData();
+  }, [initLocationAndData]);
+
+  const formatDistance = (meters?: number) => {
+    if (meters === undefined || meters === null) return '500m';
+    if (meters === 0) return '500m';
+    if (meters < 1000) return `${Math.round(meters)}m`;
+    return `${(meters / 1000).toFixed(1)} km`;
+  };
+
+  const formatWalkTime = (meters?: number) => {
+    const effectiveMeters = meters === undefined || meters === null || meters === 0 ? 500 : meters;
+    const mins = Math.max(1, Math.round(effectiveMeters / 80));
+    return `${mins} min`;
+  };
+
   return (
     <View style={styles.container}>
       <Header />
@@ -14,9 +111,9 @@ export default function HomeScreen() {
         <View style={styles.searchBox}>
           <Text style={styles.title}>Where do you want to go?</Text>
 
-          <TouchableOpacity style={styles.locationBox} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.locationBox} activeOpacity={0.7} onPress={initLocationAndData}>
             <MaterialIcons name="my-location" size={20} color="#64748B" />
-            <Text style={styles.locationText}>Current Location</Text>
+            <Text style={styles.locationText}>{locationName || 'Current Location'}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.locationBox} activeOpacity={0.7}>
@@ -44,7 +141,6 @@ export default function HomeScreen() {
             <Text style={styles.menuText}>Nearby{'\n'}Stops</Text>
           </TouchableOpacity>
 
-        
           <TouchableOpacity style={styles.menuButton} activeOpacity={0.7} onPress={() => router.push('/(tabs)/explore')}>
             <View style={styles.iconCircle}>
               <MaterialIcons name="route" size={22} color="#04325E" />
@@ -52,7 +148,6 @@ export default function HomeScreen() {
             <Text style={styles.menuText}>Plan Trip</Text>
           </TouchableOpacity>
 
-    
           <TouchableOpacity style={styles.menuButton} activeOpacity={0.7} onPress={() => router.push('/(tabs)/trips')}>
             <View style={styles.iconCircle}>
               <MaterialCommunityIcons name="ticket-confirmation-outline" size={22} color="#04325E" />
@@ -61,7 +156,6 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-      
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Upcoming Trip</Text>
         </View>
@@ -88,7 +182,6 @@ export default function HomeScreen() {
           </View>
         </View>
 
-    
         <View style={styles.nearbyHeader}>
           <Text style={styles.sectionTitle}>Nearby Stop</Text>
           <TouchableOpacity onPress={() => router.push('/map')}>
@@ -99,32 +192,60 @@ export default function HomeScreen() {
         <View style={styles.stopCard}>
           <View style={styles.stopNameRow}>
             <MaterialIcons name="grid-view" size={22} color="#04325E" />
-            <Text style={styles.stopName}>Downtown Kigali</Text>
+            <Text style={styles.stopName}>
+              {nearbyStop ? nearbyStop.name : 'Kimironko Terminus'}
+            </Text>
           </View>
 
           <View style={styles.detailsRow}>
             <View style={styles.detailItem}>
               <Ionicons name="bus-outline" size={16} color="#64748B" />
-              <Text style={styles.detailText}>500m</Text>
+              <Text style={styles.detailText}>
+                {formatDistance(nearbyStop?.distanceMeters)}
+              </Text>
             </View>
             <View style={styles.detailItem}>
               <MaterialIcons name="directions-walk" size={18} color="#64748B" />
-              <Text style={styles.detailText}>6 min</Text>
+              <Text style={styles.detailText}>
+                {formatWalkTime(nearbyStop?.distanceMeters)}
+              </Text>
             </View>
           </View>
 
           <Text style={styles.availableText}>Available Buses:</Text>
           <View style={styles.busRow}>
-            <View style={styles.busNumber}>
-              <Text style={styles.busText}>101</Text>
-            </View>
-            <View style={styles.busNumber}>
-              <Text style={styles.busText}>102</Text>
-            </View>
-            <View style={styles.busNumber}>
-              <Text style={styles.busText}>105</Text>
-            </View>
+            {activeBuses && activeBuses.length > 0 ? (
+              activeBuses.slice(0, 5).map((bus) => (
+                <View key={bus.id || bus.busNumber} style={styles.busNumber}>
+                  <Text style={styles.busText}>{bus.busNumber}</Text>
+                </View>
+              ))
+            ) : (
+              <>
+                <View style={styles.busNumber}>
+                  <Text style={styles.busText}>101</Text>
+                </View>
+                <View style={styles.busNumber}>
+                  <Text style={styles.busText}>102</Text>
+                </View>
+                <View style={styles.busNumber}>
+                  <Text style={styles.busText}>105</Text>
+                </View>
+              </>
+            )}
           </View>
+
+          {error ? (
+            <TouchableOpacity
+              onPress={() => fetchTransportData(coords.latitude, coords.longitude)}
+              activeOpacity={0.7}
+              style={{ marginTop: 10 }}
+            >
+              <Text style={{ fontSize: 12, color: '#64748B', fontStyle: 'italic' }}>
+                {error} Tap to retry.
+              </Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
       </ScrollView>
     </View>

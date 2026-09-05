@@ -1,4 +1,5 @@
 import { Platform } from "react-native";
+import { API_BASE_URL } from "../constants/config";
 
 export const BASE_URL = 'https://tega-bus-backend.onrender.com/api';
 
