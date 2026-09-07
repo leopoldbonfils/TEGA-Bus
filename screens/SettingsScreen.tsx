@@ -1,11 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function SettingsScreen() {
@@ -77,7 +77,7 @@ export default function SettingsScreen() {
 
         <View style={styles.sectionCard}>
 
-          <TouchableOpacity style={styles.row} onPress={() => router.push('/saved-locations')}>
+          <TouchableOpacity style={styles.row} onPress={() => router.push('/personal-info' as any)}>
             <View style={styles.iconCircle}>
               <Ionicons
                 name="person-outline"

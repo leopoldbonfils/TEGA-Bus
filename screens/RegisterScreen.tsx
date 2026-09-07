@@ -1,18 +1,19 @@
-import { View, Text, StyleSheet, Image, TextInput, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native'
-import { useState, useEffect } from 'react';
-import { Checkbox } from 'expo-checkbox';
-import React from 'react'
-import { Ionicons, Feather } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { registerUser } from '../services/authService';
-import Toast from 'react-native-toast-message';
-import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
+import { useAuth } from '@/context/AuthContext';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Google from 'expo-auth-session/providers/google';
+import { Checkbox } from 'expo-checkbox';
+import { router } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import Toast from 'react-native-toast-message';
+import { registerUser } from '../services/authService';
 
 WebBrowser.maybeCompleteAuthSession();
 
 export default function RegisterScreen() {
+  const { login } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -42,6 +43,16 @@ export default function RegisterScreen() {
         headers: { Authorization: `Bearer ${token}` },
       });
       const user = await res.json();
+      login(
+        {
+          id: user.id,
+          name: user.name || user.email,
+          email: user.email,
+          role: 'passenger',
+          avatarUri: user.picture || null,
+        },
+        token
+      );
       Toast.show({
         type: 'success',
         text1: 'Google Sign-In',
@@ -78,6 +89,19 @@ export default function RegisterScreen() {
           AppleAuthentication.AppleAuthenticationScope.EMAIL,
         ],
       });
+
+      const name = [credential.fullName?.givenName, credential.fullName?.familyName]
+        .filter(Boolean)
+        .join(' ') || 'Apple User';
+      login(
+        {
+          id: credential.user,
+          name,
+          email: credential.email || 'Apple account',
+          role: 'passenger',
+        },
+        credential.identityToken || credential.user
+      );
 
       Toast.show({
         type: 'success',

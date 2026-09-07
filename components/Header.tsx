@@ -1,14 +1,16 @@
-import React from 'react';
-import { View, Text,
-  TouchableOpacity,
-  Image,
-  StyleSheet,
-  Platform,
-  StatusBar,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuth } from '@/context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import {
+    Image,
+    Platform,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface HeaderProps {
   title?: string;
@@ -23,6 +25,7 @@ export default function Header({
   showAvatar = true,
   onBack,
 }: HeaderProps) {
+  const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const topPadding = Math.max(
     insets.top,
@@ -75,7 +78,7 @@ export default function Header({
             activeOpacity={0.8}
           >
             <Image
-              source={require('../assets/BusImage/profile.png')}
+              source={user?.avatarUri ? { uri: user.avatarUri } : require('../assets/BusImage/profile.png')}
               style={styles.avatar}
             />
           </TouchableOpacity>
