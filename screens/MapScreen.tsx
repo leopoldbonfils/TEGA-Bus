@@ -1,43 +1,92 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, ScrollView, } from 'react-native';
+import {StyleSheet, Text, View,TouchableOpacity, ActivityIndicator, Alert,} from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { Ionicons, MaterialIcons, MaterialCommunityIcons,} from '@expo/vector-icons';
+import { router, useLocalSearchParams } from 'expo-router';
 import { BACKEND_URL } from '../constants/config';
-import { ROUTE_WAYPOINTS } from '../constants/routeWaypoints';
-
-// Types & Constants
+import { ROUTE_WAYPOINTS, Coordinate } from '../constants/routeWaypoints';
 
 interface Telemetry {
   busNumber: string;
   routeNumber: string;
-  routeColor: string;
   speed: number;
   heading: number;
   etaMinutes: number;
   currentStop: string;
   nextStop: string;
-  progress: number;
   distanceToNextStopKm: number;
-  isDestinationReached: boolean;
-  simulationStatus: string;
+  isMoving: boolean;
+  motionStatus: 'MOVING' | 'PARKED';
 }
 
-const ROUTE_TABS = [
-  { id: 'ALL', label: 'All Routes', color: '#04325E' },
-  { id: '101', label: 'Route 101', color: '#2563EB' },
-  { id: '202', label: 'Route 202', color: '#EF4444' },
-  { id: '203', label: 'Route 203', color: '#16A34A' },
-  { id: '204', label: 'Route 204', color: '#7C3AED' },
-];
+const DEFAULT_ROUTE_STOPS: Record<string, { name: string; latitude: number; longitude: number; labelSide?: 'left' | 'right' }[]> = {
+  '101': [
+    { name: 'Downtown (Kigali City)', latitude: -1.9500, longitude: 30.0580, labelSide: 'right' },
+    { name: 'Kigali City', latitude: -1.9536, longitude: 30.0605, labelSide: 'left' },
+    { name: 'Rwandex', latitude: -1.9480, longitude: 30.0500, labelSide: 'right' },
+    { name: 'Kacyiru', latitude: -1.9405, longitude: 30.0820, labelSide: 'right' },
+    { name: 'Nyabugogo Terminal', latitude: -1.9346, longitude: 30.0540, labelSide: 'left' },
+  ],
+  '202': [
+    { name: 'Nyabugogo Terminal', latitude: -1.9346, longitude: 30.0540, labelSide: 'right' },
+    { name: 'Kacyiru', latitude: -1.9405, longitude: 30.0820, labelSide: 'right' },
+    { name: 'Remera', latitude: -1.9502, longitude: 30.1073, labelSide: 'left' },
+    { name: 'Kimironko Terminus', latitude: -1.9400, longitude: 30.1200, labelSide: 'right' },
+  ],
+  '109': [
+    { name: 'Nyabugogo Bus Park', latitude: -1.9355, longitude: 30.0540, labelSide: 'right' },
+    { name: 'Kinamba Bridge', latitude: -1.9392, longitude: 30.0612, labelSide: 'left' },
+    { name: 'Rwandex', latitude: -1.9567, longitude: 30.0815, labelSide: 'right' },
+    { name: 'Sonatubes', latitude: -1.9612, longitude: 30.0965, labelSide: 'left' },
+    { name: 'Remera Bus Park', latitude: -1.9502, longitude: 30.1073, labelSide: 'right' },
+  ],
+  '203': [
+    { name: 'Nyabugogo Terminal', latitude: -1.9346, longitude: 30.0540, labelSide: 'right' },
+    { name: 'Kigali City', latitude: -1.9536, longitude: 30.0605, labelSide: 'left' },
+    { name: 'Gisimenti', latitude: -1.9540, longitude: 30.1030, labelSide: 'right' },
+    { name: 'Remera Bus Park', latitude: -1.9502, longitude: 30.1073, labelSide: 'left' },
+  ],
+  '204': [
+    { name: 'Kimironko Terminus', latitude: -1.9400, longitude: 30.1200, labelSide: 'right' },
+    { name: 'Gisimenti', latitude: -1.9540, longitude: 30.1030, labelSide: 'left' },
+    { name: 'Kigali City', latitude: -1.9536, longitude: 30.0605, labelSide: 'right' },
+    { name: 'Downtown (Kigali City)', latitude: -1.9500, longitude: 30.0580, labelSide: 'left' },
+  ],
+  '303': [
+    { name: 'Nyabugogo Terminal', latitude: -1.9355, longitude: 30.0540, labelSide: 'right' },
+    { name: 'Gatsata', latitude: -1.9220, longitude: 30.0515, labelSide: 'left' },
+    { name: 'Karuruma', latitude: -1.8965, longitude: 30.0570, labelSide: 'right' },
+    { name: 'Nyacyonga', latitude: -1.8682, longitude: 30.0847, labelSide: 'left' },
+  ],
+  '304': [
+    { name: 'Nyacyonga', latitude: -1.8682, longitude: 30.0847, labelSide: 'right' },
+    { name: 'Karuruma', latitude: -1.8965, longitude: 30.0570, labelSide: 'left' },
+    { name: 'Gatsata', latitude: -1.9220, longitude: 30.0515, labelSide: 'right' },
+    { name: 'Nyabugogo Terminal', latitude: -1.9355, longitude: 30.0540, labelSide: 'left' },
+  ],
+  '305': [
+    { name: 'Nyabugogo Terminal', latitude: -1.9355, longitude: 30.0540, labelSide: 'right' },
+    { name: 'Gisozi', latitude: -1.9315, longitude: 30.0645, labelSide: 'left' },
+    { name: 'Kagugu', latitude: -1.9180, longitude: 30.0785, labelSide: 'right' },
+    { name: 'Batsinda', latitude: -1.8985, longitude: 30.0818, labelSide: 'left' },
+    { name: 'Nyacyonga', latitude: -1.8682, longitude: 30.0847, labelSide: 'right' },
+  ],
+};
 
-// Leaflet + Socket.IO Map HTML
-// Connects to Socket.IO backend, pre-renders real Kigali road network lines
-// for all routes (101, 202, 203, 204), animates live buses, and provides interactive
-// route zooming and live telemetry to React Native.
+const buildSingleBusMapHtml = (
+  backendUrl: string,
+  routeNumber: string,
+  busNumber: string,
+  waypoints: Coordinate[],
+  userLat: number,
+  userLng: number,
+): string => {
+  const waypointsJson = JSON.stringify(waypoints);
+  const stops = DEFAULT_ROUTE_STOPS[routeNumber] || DEFAULT_ROUTE_STOPS['202'];
+  const stopsJson = JSON.stringify(stops);
 
-const buildMapHtml = (backendUrl: string, waypointsJson: string): string => `<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8"/>
@@ -45,588 +94,307 @@ const buildMapHtml = (backendUrl: string, waypointsJson: string): string => `<!D
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    html,body{width:100%;height:100%;overflow:hidden;background:#E8EDF2}
+    html,body{width:100%;height:100%;overflow:hidden;background:#F1F5F9;font-family:-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif}
     #map{width:100vw;height:100vh}
-    .leaflet-control-attribution{font-size:8px!important;background:rgba(255,255,255,0.6)!important;padding:1px 4px!important;border-radius:3px!important}
-    .leaflet-control-attribution a{color:#0B3D66!important}
 
-    /*  Bus marker: centered precisely on the road coordinates  */
-    .tega-bus-wrap{position:relative;width:50px;height:50px;display:flex;align-items:center;justify-content:center;cursor:pointer}
-    .tega-bus-pulse{position:absolute;width:46px;height:46px;border-radius:50%;opacity:0;animation:tegaPulse 2.2s ease-out infinite;pointer-events:none}
-    @keyframes tegaPulse{0%{transform:scale(.55);opacity:.85}100%{transform:scale(2.1);opacity:0}}
-    .tega-bus-vehicle{position:relative;z-index:10;width:22px;height:42px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.55));transform-origin:center center;transition:transform .55s cubic-bezier(0.25,0.46,0.45,0.94)}
-    .tega-bus-label{position:absolute;top:48px;left:50%;transform:translateX(-50%);color:#fff;font-size:9.5px;font-weight:900;font-family:system-ui,-apple-system,sans-serif;padding:1.5px 6px;border-radius:4px;white-space:nowrap;box-shadow:0 2px 5px rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.3);z-index:12;pointer-events:none}
+    .leaflet-control-attribution{font-size:8px!important;background:rgba(255,255,255,0.7)!important;padding:2px 4px!important;border-radius:3px!important}
 
-    /*  Stop marker  */
-    .tega-stop{display:flex;align-items:center;justify-content:center;border-radius:50%;box-shadow:0 2px 5px rgba(0,0,0,.3)}
-    .tega-stop-current{animation:stopBeat 1.4s ease-in-out infinite}
-    @keyframes stopBeat{0%,100%{transform:scale(1)}50%{transform:scale(1.35)}}
+    /* User 'You are here' Marker */
+    .user-marker-wrap{position:relative;width:40px;height:40px;display:flex;align-items:center;justify-content:center}
+    .user-dot-pulse{position:absolute;width:34px;height:34px;border-radius:50%;background:rgba(37,99,235,0.22);animation:userPulse 2s infinite}
+    @keyframes userPulse{0%{transform:scale(0.6);opacity:0.9}100%{transform:scale(2.2);opacity:0}}
+    .user-dot-core{position:relative;z-index:2;width:14px;height:14px;border-radius:50%;background:#2563EB;border:3px solid #FFFFFF;box-shadow:0 2px 6px rgba(37,99,235,0.4)}
+    .user-callout{position:absolute;top:32px;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:8px;padding:3px 8px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.08);font-size:11px;font-weight:700;color:#334155;pointer-events:none}
 
-    /*  Tooltip  */
-    .leaflet-tooltip{font-family:system-ui,-apple-system,sans-serif;font-size:11px;font-weight:700;background:#0F172A;color:#fff;border:none;border-radius:6px;padding:3px 8px;box-shadow:0 2px 8px rgba(0,0,0,.35)}
-    .leaflet-tooltip-top::before{border-top-color:#0F172A}
+    /* Stop Marker & Permanent White Callout Pill */
+    .stop-marker-wrap{position:relative;display:flex;align-items:center;justify-content:center}
+    .stop-dot{width:12px;height:12px;border-radius:50%;background:#FFFFFF;border:3px solid #04325E;box-shadow:0 1px 4px rgba(0,0,0,0.25)}
+    .stop-label-pill{position:absolute;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:8px;padding:4px 9px;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.08);font-size:11px;font-weight:800;color:#04325E;pointer-events:none}
+    .stop-label-right{left:18px;top:-8px}
+    .stop-label-left{right:18px;top:-8px}
 
-    /*  Connection status bar  */
-    #conn-bar{position:fixed;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#10B981,#2563EB,#7C3AED);z-index:9999;opacity:0;transition:opacity .4s}
-    #conn-bar.loading{opacity:1;animation:barSlide 1.2s ease-in-out infinite}
-    @keyframes barSlide{0%{background-position:0% 50%}100%{background-position:100% 50%}}
+    /* Single Bus Vehicle & Badge */
+    .bus-marker-wrap{position:relative;width:56px;height:56px;display:flex;align-items:center;justify-content:center}
+    .bus-vehicle{width:24px;height:46px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 3px 6px rgba(0,0,0,0.35));transition:transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94)}
+    .bus-badge-pill{position:absolute;top:-18px;background:#04325E;border:1.5px solid #FFFFFF;border-radius:8px;padding:2px 8px;white-space:nowrap;box-shadow:0 2px 6px rgba(4,50,94,0.35);font-size:10.5px;font-weight:900;color:#FFFFFF;display:flex;align-items:center;gap:4px;letter-spacing:0.3px}
   </style>
 </head>
 <body>
-  <div id="conn-bar" class="loading"></div>
   <div id="map"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <script>
     var BACKEND_URL = '${backendUrl}';
-    var INITIAL_ROUTES = ${waypointsJson};
+    var TARGET_BUS = '${busNumber}';
+    var TARGET_ROUTE = '${routeNumber}';
+    var USER_LAT = ${userLat};
+    var USER_LNG = ${userLng};
+    var ROUTE_WAYPOINTS = ${waypointsJson};
+    var STOPS = ${stopsJson};
 
-    var DEFAULT_STOPS = {
-      '101': [
-        { name: 'Downtown (Kigali City)', latitude: -1.9500, longitude: 30.0580, order: 1 },
-        { name: 'Kigali City', latitude: -1.9536, longitude: 30.0605, order: 2 },
-        { name: 'Rwandex', latitude: -1.9480, longitude: 30.0500, order: 3 },
-        { name: 'Kacyiru', latitude: -1.9405, longitude: 30.0820, order: 4 },
-        { name: 'Nyabugogo Terminal', latitude: -1.9346, longitude: 30.0540, order: 5 },
-      ],
-      '202': [
-        { name: 'Nyabugogo Terminal', latitude: -1.9346, longitude: 30.0540, order: 1 },
-        { name: 'Kacyiru', latitude: -1.9405, longitude: 30.0820, order: 2 },
-        { name: 'Remera', latitude: -1.9502, longitude: 30.1073, order: 3 },
-        { name: 'Kimironko Market', latitude: -1.9400, longitude: 30.1200, order: 4 },
-      ],
-      '203': [
-        { name: 'Nyabugogo Terminal', latitude: -1.9346, longitude: 30.0540, order: 1 },
-        { name: 'Kigali City', latitude: -1.9536, longitude: 30.0605, order: 2 },
-        { name: 'Gisimenti', latitude: -1.9540, longitude: 30.1030, order: 3 },
-        { name: 'Remera Bus Park', latitude: -1.9502, longitude: 30.1073, order: 4 },
-      ],
-      '204': [
-        { name: 'Kimironko Market', latitude: -1.9400, longitude: 30.1200, order: 1 },
-        { name: 'Gisimenti', latitude: -1.9540, longitude: 30.1030, order: 2 },
-        { name: 'Kigali City', latitude: -1.9536, longitude: 30.0605, order: 3 },
-        { name: 'Downtown (Kigali City)', latitude: -1.9500, longitude: 30.0580, order: 4 },
-      ]
-    };
-
-    var PALETTE = {
-      '101': '#2563EB',
-      '202': '#EF4444',
-      '203': '#16A34A',
-      '204': '#7C3AED',
-      '205': '#EA580C',
-      '206': '#0D9488',
-    };
-    var FALLBACK = ['#2563EB', '#EF4444', '#16A34A', '#7C3AED', '#EA580C', '#0D9488'];
-    var colorIdx = 0;
-    var colorMap = {};
-    function getColor(routeNum, routeColor) {
-      if (routeColor) return routeColor;
-      if (PALETTE[routeNum]) return PALETTE[routeNum];
-      if (!colorMap[routeNum]) {
-        colorMap[routeNum] = FALLBACK[colorIdx % FALLBACK.length];
-        colorIdx++;
-      }
-      return colorMap[routeNum];
-    }
-
-    var busMarkers = {};
-    var dynamicRoutes = {};
-    var dynamicRoutesCoords = {};
-    var busAnimState = {};
-    var staticRoutes = {};
-    var routeBounds = {};
-    var stopGroups = {};
-    var followBusId = null;
     var isFollowing = false;
-    var activeRouteId = 'ALL';
+    var currentTileIndex = 0;
+    var busMarker = null;
+    var currentBusHeading = 0;
+    var busLatLng = null;
+    var routePoly = null;
+    var casingPoly = null;
 
     var map = L.map('map', {
-      center: [-1.9441, 30.0750],
-      zoom: 13,
+      center: [USER_LAT, USER_LNG],
+      zoom: 14,
       zoomControl: false,
       attributionControl: true,
       preferCanvas: true
     });
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>'
-    }).addTo(map);
 
-    function busSvg(color) {
-      return [
-        '<svg width="22" height="42" viewBox="0 0 22 42" fill="none" xmlns="http://www.w3.org/2000/svg">',
-        '  <defs>',
-        '    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">',
-        '      <stop offset="0%" stop-color="' + lighten(color) + '"/>',
-        '      <stop offset="100%" stop-color="' + darken(color) + '"/>',
-        '    </linearGradient>',
-        '  </defs>',
-        '  <rect x="1" y="3" width="20" height="36" rx="4" fill="url(#bg)" stroke="white" stroke-width="1.5"/>',
-        '  <polygon points="11,0 6,6 16,6" fill="rgba(255,255,255,0.95)"/>',
-        '  <rect x="3" y="4" width="16" height="7" rx="2" fill="rgba(147,210,255,0.78)" stroke="rgba(255,255,255,0.5)" stroke-width="0.5"/>',
-        '  <rect x="1.5" y="13" width="2.5" height="16" rx="1.2" fill="rgba(15,23,42,0.45)"/>',
-        '  <rect x="18" y="13" width="2.5" height="16" rx="1.2" fill="rgba(15,23,42,0.45)"/>',
-        '  <rect x="0" y="8" width="2" height="5" rx="1" fill="#0F172A"/>',
-        '  <rect x="20" y="8" width="2" height="5" rx="1" fill="#0F172A"/>',
-        '  <rect x="0" y="27" width="2" height="5" rx="1" fill="#0F172A"/>',
-        '  <rect x="20" y="27" width="2" height="5" rx="1" fill="#0F172A"/>',
-        '  <rect x="3" y="1.5" width="5" height="2" rx="0.8" fill="#FEF08A"/>',
-        '  <rect x="14" y="1.5" width="5" height="2" rx="0.8" fill="#FEF08A"/>',
-        '  <rect x="3" y="38.5" width="5" height="2" rx="0.8" fill="#EF4444"/>',
-        '  <rect x="14" y="38.5" width="5" height="2" rx="0.8" fill="#EF4444"/>',
-        '</svg>',
-      ].join('');
+    var tileLayers = [
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }),
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 19, attribution: '© CartoDB' })
+    ];
+    tileLayers[0].addTo(map);
+
+    // 1. Draw Passenger 'You are here' Pin
+    var userIcon = L.divIcon({
+      className: '',
+      iconSize: [40, 40],
+      iconAnchor: [20, 20],
+      html: '<div class="user-marker-wrap"><div class="user-dot-pulse"></div><div class="user-dot-core"></div><div class="user-callout">You are here</div></div>'
+    });
+    L.marker([USER_LAT, USER_LNG], { icon: userIcon, zIndexOffset: 800 }).addTo(map);
+
+    // 2. Draw Target Route Line
+    var latLngs = [];
+    if (ROUTE_WAYPOINTS && ROUTE_WAYPOINTS.length >= 2) {
+      latLngs = ROUTE_WAYPOINTS.map(function(w) { return [w.latitude, w.longitude]; });
+    } else if (STOPS && STOPS.length >= 2) {
+      latLngs = STOPS.map(function(s) { return [s.latitude, s.longitude]; });
     }
 
-    function lighten(hex) {
-      var r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
-      r = Math.min(255, r + 40); g = Math.min(255, g + 40); b = Math.min(255, b + 40);
-      return '#' + r.toString(16).padStart(2,'0') + g.toString(16).padStart(2,'0') + b.toString(16).padStart(2,'0');
-    }
-    function darken(hex) {
-      var r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
-      r = Math.max(0, r - 40); g = Math.max(0, g - 40); b = Math.max(0, b - 40);
-      return '#' + r.toString(16).padStart(2,'0') + g.toString(16).padStart(2,'0') + b.toString(16).padStart(2,'0');
-    }
-
-    function makeBusIcon(busNum, routeNum, color, heading) {
-      var label = routeNum || (busNum || '').replace(/^BUS-?/i, '') || '?';
-      var html = [
-        '<div class="tega-bus-wrap">',
-        '  <div class="tega-bus-pulse" style="border:2.5px solid ' + color + ';background:' + color + '18"></div>',
-        '  <div class="tega-bus-vehicle" style="transform:rotate(' + heading + 'deg)">',
-        busSvg(color),
-        '  </div>',
-        '  <div class="tega-bus-label" style="background:' + color + '">BUS ' + label + '</div>',
-        '</div>',
-      ].join('');
-      return L.divIcon({ html: html, className: '', iconSize: [50, 50], iconAnchor: [25, 25], popupAnchor: [0, -25] });
-    }
-
-    function makeStopIcon(type, color) {
-      var cfg = {
-        origin: { s: 15, bg: color, border: 'white', inner: '' },
-        destination: { s: 17, bg: '#0B3D66', border: color, inner: '' },
-        passed: { s: 10, bg: color, border: color, inner: '' },
-        current: { s: 15, bg: color, border: 'white', inner: '<div style="width:6px;height:6px;border-radius:50%;background:white"></div>' },
-        upcoming: { s: 11, bg: 'white', border: color || '#94A3B8', inner: '' },
-      };
-      var c = cfg[type] || cfg.upcoming;
-      var extraClass = type === 'current' ? ' tega-stop-current' : '';
-      var html = '<div class="tega-stop' + extraClass + '" style="width:' + c.s + 'px;height:' + c.s + 'px;background:' + c.bg + ';border:2.5px solid ' + c.border + '">' + c.inner + '</div>';
-      return L.divIcon({ html: html, className: '', iconSize: [c.s, c.s], iconAnchor: [c.s / 2, c.s / 2] });
-    }
-
-    function drawStops(key, stops, color) {
-      if (stopGroups[key]) { map.removeLayer(stopGroups[key]); }
-      var g = L.layerGroup();
-      stops.forEach(function(s, i) {
-        var t = i === 0 ? 'origin' : i === stops.length - 1 ? 'destination' : 'upcoming';
-        var icon = makeStopIcon(t, color);
-        L.marker([s.latitude, s.longitude], { icon: icon, zIndexOffset: 500 })
-          .bindTooltip(s.name, { direction: 'top', offset: [0, -8], opacity: 0.95 })
-          .addTo(g);
-      });
-      g.addTo(map);
-      stopGroups[key] = g;
-    }
-
-    //  Pre-render all Kigali routes with actual road geometry
-    function renderStaticRoutes() {
-      if (!INITIAL_ROUTES) return;
-      Object.keys(INITIAL_ROUTES).forEach(function (rNum) {
-        var waypoints = INITIAL_ROUTES[rNum];
-        if (!waypoints || waypoints.length < 2) return;
-        var color = getColor(rNum);
-        var latLngs = waypoints.map(function (w) { return [w.latitude, w.longitude]; });
-
-        // Outer glow underlay
-        var casing = L.polyline(latLngs, {
-          color: color,
-          weight: 7,
-          opacity: 0.28,
-          lineCap: 'round',
-          lineJoin: 'round',
-          interactive: false
-        }).addTo(map);
-
-        // Vibrant main road line
-        var poly = L.polyline(latLngs, {
-          color: color,
-          weight: 4.5,
-          opacity: 0.95,
-          lineCap: 'round',
-          lineJoin: 'round',
-          interactive: true
-        }).addTo(map);
-
-        poly.on('click', function() {
-          window.selectRoute(rNum);
-          postRN({ type: 'routeSelected', routeNumber: rNum });
-        });
-
-        staticRoutes[rNum] = { casing: casing, poly: poly, color: color };
-        routeBounds[rNum] = poly.getBounds();
-
-        // Draw stop pins
-        var stops = DEFAULT_STOPS[rNum];
-        if (stops) {
-          drawStops('route_' + rNum, stops, color);
-        }
-      });
-    }
-
-    renderStaticRoutes();
-
-    function distSq(p1, p2) {
-      var dlat = p1[0] - p2[0];
-      var dlng = p1[1] - p2[1];
-      return dlat * dlat + dlng * dlng;
-    }
-
-    function getDistanceMeters(p1, p2) {
-      var R = 6371000;
-      var dLat = (p2[0] - p1[0]) * Math.PI / 180;
-      var dLon = (p2[1] - p1[1]) * Math.PI / 180;
-      var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-              Math.cos(p1[0] * Math.PI / 180) * Math.cos(p2[0] * Math.PI / 180) *
-              Math.sin(dLon / 2) * Math.sin(dLon / 2);
-      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    }
-
-    function getBearing(p1, p2) {
-      var lat1 = p1[0] * Math.PI / 180;
-      var lat2 = p2[0] * Math.PI / 180;
-      var dLon = (p2[1] - p1[1]) * Math.PI / 180;
-      var y = Math.sin(dLon) * Math.cos(lat2);
-      var x = Math.cos(lat1) * Math.sin(lat2) -
-              Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
-      var brng = Math.atan2(y, x) * 180 / Math.PI;
-      return (brng + 360) % 360;
-    }
-
-    function lerpAngle(from, to, t) {
-      var diff = ((to - from + 540) % 360) - 180;
-      return (from + diff * t + 360) % 360;
-    }
-
-    function getWaypointLatLng(wp) {
-      if (!wp) return [0, 0];
-      if (Array.isArray(wp)) return [wp[0], wp[1]];
-      return [wp.latitude, wp.longitude];
-    }
-
-    var routeMetricsCache = {};
-
-    function getRouteWaypoints(busId, routeNum) {
-      if (busId && dynamicRoutesCoords[busId] && dynamicRoutesCoords[busId].length >= 2) {
-        return dynamicRoutesCoords[busId];
-      }
-      if (routeNum && INITIAL_ROUTES && INITIAL_ROUTES[routeNum] && INITIAL_ROUTES[routeNum].length >= 2) {
-        return INITIAL_ROUTES[routeNum];
-      }
-      return null;
-    }
-
-    function getRouteMetrics(busId, routeNum) {
-      var key = (busId && dynamicRoutesCoords[busId]) ? ('live_' + busId) : ('static_' + routeNum);
-      if (routeMetricsCache[key]) {
-        return routeMetricsCache[key];
-      }
-
-      var raw = getRouteWaypoints(busId, routeNum);
-      if (!raw || raw.length < 2) return null;
-
-      var wps = [];
-      for (var i = 0; i < raw.length; i++) {
-        wps.push(getWaypointLatLng(raw[i]));
-      }
-
-      var cumDists = [0];
-      var total = 0;
-      for (var j = 0; j < wps.length - 1; j++) {
-        var d = getDistanceMeters(wps[j], wps[j + 1]);
-        total += d;
-        cumDists.push(total);
-      }
-
-      var metrics = {
-        waypoints: wps,
-        cumDists: cumDists,
-        totalDist: total
-      };
-      routeMetricsCache[key] = metrics;
-      return metrics;
-    }
-
-    function findSegmentIndex(cumDists, dist) {
-      var low = 0;
-      var high = cumDists.length - 2;
-      while (low <= high) {
-        var mid = (low + high) >> 1;
-        if (cumDists[mid + 1] < dist) {
-          low = mid + 1;
-        } else if (cumDists[mid] > dist) {
-          high = mid - 1;
-        } else {
-          return mid;
-        }
-      }
-      return Math.max(0, Math.min(cumDists.length - 2, low));
-    }
-
-    function getPositionAtRouteDist(metrics, dist) {
-      var wps = metrics.waypoints;
-      var cumDists = metrics.cumDists;
-      var total = metrics.totalDist;
-
-      var clamped = Math.max(0, Math.min(dist, total));
-      var i = findSegmentIndex(cumDists, clamped);
-      var p1 = wps[i];
-      var p2 = wps[Math.min(wps.length - 1, i + 1)];
-
-      var segStart = cumDists[i];
-      var segEnd = cumDists[Math.min(cumDists.length - 1, i + 1)];
-      var segLen = segEnd - segStart;
-
-      var frac = segLen > 0 ? (clamped - segStart) / segLen : 0;
-      frac = Math.max(0, Math.min(1, frac));
-
-      return [
-        p1[0] + (p2[0] - p1[0]) * frac,
-        p1[1] + (p2[1] - p1[1]) * frac
-      ];
-    }
-
-    function getRoadHeadingAtRouteDist(metrics, dist) {
-      var total = metrics.totalDist;
-      var cur = getPositionAtRouteDist(metrics, dist);
-
-      var lookaheadDist = Math.min(dist + 15, total);
-      if (lookaheadDist <= dist + 0.5) {
-        var prevDist = Math.max(0, dist - 5);
-        var prev = getPositionAtRouteDist(metrics, prevDist);
-        return getBearing(prev, cur);
-      }
-
-      var ahead = getPositionAtRouteDist(metrics, lookaheadDist);
-      return getBearing(cur, ahead);
-    }
-
-    function projectGpsToRouteDist(metrics, point, hintDist) {
-      var wps = metrics.waypoints;
-      var cumDists = metrics.cumDists;
-      var N = wps.length;
-
-      var bestDist = 0;
-      var bestDistSq = Infinity;
-
-      var startI = 0;
-      var endI = N - 1;
-
-      if (typeof hintDist === 'number' && hintDist >= 0) {
-        var approxI = findSegmentIndex(cumDists, hintDist);
-        startI = Math.max(0, approxI - 5);
-        endI = Math.min(N - 1, approxI + 45);
-      }
-
-      function search(fromI, toI) {
-        for (var i = fromI; i < toI; i++) {
-          var p1 = wps[i];
-          var p2 = wps[i + 1];
-
-          var dx = p2[0] - p1[0];
-          var dy = p2[1] - p1[1];
-          var segLenSq = dx * dx + dy * dy;
-
-          var t = 0;
-          if (segLenSq > 0) {
-            t = ((point[0] - p1[0]) * dx + (point[1] - p1[1]) * dy) / segLenSq;
-            t = Math.max(0, Math.min(1, t));
-          }
-
-          var projLat = p1[0] + t * dx;
-          var projLng = p1[1] + t * dy;
-          var dsq = distSq(point, [projLat, projLng]);
-
-          if (dsq < bestDistSq) {
-            bestDistSq = dsq;
-            var segMeters = cumDists[i + 1] - cumDists[i];
-            bestDist = cumDists[i] + t * segMeters;
-          }
-        }
-      }
-
-      search(startI, endI);
-
-      if (bestDistSq > 0.00015 && (startI > 0 || endI < N - 1)) {
-        search(0, N - 1);
-      }
-
-      return bestDist;
-    }
-
-    function animateBusAlongRoad(busId, metrics, fromDist, toDist, durationMs) {
-      var state = busAnimState[busId];
-      var marker = busMarkers[busId];
-      if (!state || !marker) return;
-
-      if (state.animId) {
-        cancelAnimationFrame(state.animId);
-        state.animId = null;
-      }
-
-      var delta = toDist - fromDist;
-      if (delta <= 0.2) {
-        state.currentDist = toDist;
-        var p = getPositionAtRouteDist(metrics, toDist);
-        marker.setLatLng(p);
-        return;
-      }
-
-      var duration = Math.max(1200, Math.min(durationMs || 2000, 4000));
-      var startTime = performance.now();
-
-      function frame(now) {
-        var elapsed = now - startTime;
-        var t = Math.min(elapsed / duration, 1.0);
-
-        var currentD = fromDist + t * delta;
-        state.currentDist = currentD;
-
-        var pos = getPositionAtRouteDist(metrics, currentD);
-        marker.setLatLng(pos);
-
-        var targetRoadAngle = getRoadHeadingAtRouteDist(metrics, currentD);
-        var smoothHeading = lerpAngle(state.currentHeading, targetRoadAngle, 0.12);
-        state.currentHeading = smoothHeading;
-
-        var el = marker.getElement();
-        if (el) {
-          var veh = el.querySelector('.tega-bus-vehicle');
-          if (veh) {
-            veh.style.transform = 'rotate(' + smoothHeading.toFixed(1) + 'deg)';
-          }
-        }
-
-        if (t < 1.0) {
-          state.animId = requestAnimationFrame(frame);
-        } else {
-          state.animId = null;
-          state.currentDist = toDist;
-          var finalPos = getPositionAtRouteDist(metrics, toDist);
-          marker.setLatLng(finalPos);
-        }
-      }
-
-      state.animId = requestAnimationFrame(frame);
-    }
-
-    function updateBus(d) {
-      var id = d.busId;
-      var rawTargetPos = [d.latitude, d.longitude];
-      var color = getColor(d.routeNumber, d.routeColor);
-      var now = performance.now();
-
-      var metrics = getRouteMetrics(id, d.routeNumber);
-      var state = busAnimState[id];
-
-      if (!state) {
-        var startDist = metrics ? projectGpsToRouteDist(metrics, rawTargetPos, 0) : 0;
-        var startPos = metrics ? getPositionAtRouteDist(metrics, startDist) : rawTargetPos;
-        var initialHeading = metrics ? getRoadHeadingAtRouteDist(metrics, startDist) : (d.heading || 0);
-
-        state = {
-          currentDist: startDist,
-          currentPos: startPos,
-          currentHeading: initialHeading,
-          lastUpdateTimestamp: now,
-          estimatedInterval: 2000,
-          animId: null
-        };
-        busAnimState[id] = state;
-
-        var icon = makeBusIcon(d.busNumber, d.routeNumber, color, initialHeading);
-        var m = L.marker(startPos, { icon: icon, zIndexOffset: 1000 }).addTo(map);
-        m.on('click', function() {
-          followBusId = id;
-          postRN({ type: 'busSelected', busId: id });
-        });
-        busMarkers[id] = m;
-        return;
-      }
-
-      var interval = now - state.lastUpdateTimestamp;
-      if (interval > 600 && interval < 10000) {
-        state.estimatedInterval = interval;
-      }
-      state.lastUpdateTimestamp = now;
-
-      if (!metrics || metrics.waypoints.length < 2) {
-        return;
-      }
-
-      var targetDist = projectGpsToRouteDist(metrics, rawTargetPos, state.currentDist);
-
-      var isLoopRestart = (state.currentDist > metrics.totalDist * 0.82 && targetDist < metrics.totalDist * 0.15);
-      if (isLoopRestart) {
-        if (state.animId) cancelAnimationFrame(state.animId);
-        state.currentDist = targetDist;
-        var loopPos = getPositionAtRouteDist(metrics, targetDist);
-        var loopHeading = getRoadHeadingAtRouteDist(metrics, targetDist);
-        state.currentHeading = loopHeading;
-        busMarkers[id].setLatLng(loopPos);
-        var elLoop = busMarkers[id].getElement();
-        if (elLoop) {
-          var vLoop = elLoop.querySelector('.tega-bus-vehicle');
-          if (vLoop) vLoop.style.transform = 'rotate(' + loopHeading.toFixed(1) + 'deg)';
-        }
-        return;
-      }
-
-      var forwardDelta = targetDist - state.currentDist;
-      if (forwardDelta <= 0.4) {
-        return; 
-      }
-
-      var fromDist = state.currentDist;
-      animateBusAlongRoad(id, metrics, fromDist, targetDist, state.estimatedInterval);
-
-      if (d.routeNumber && staticRoutes[d.routeNumber]) {
-        staticRoutes[d.routeNumber].poly.bringToFront();
-      }
-
-      if (isFollowing && (followBusId === id || !followBusId)) {
-        followBusId = id;
-        var forwardPos = getPositionAtRouteDist(metrics, targetDist);
-        map.panTo(forwardPos, { animate: true, duration: (state.estimatedInterval / 1000) * 0.95 });
-      }
-    }
-
-    function drawRoute(d) {
-      var id = d.busId;
-      var color = getColor(d.routeNumber, d.routeColor);
-
-      if (d.coordinates && d.coordinates.length > 0) {
-        dynamicRoutesCoords[id] = d.coordinates;
-      }
-
-      if (dynamicRoutes[id]) { map.removeLayer(dynamicRoutes[id]); }
-      var lls = d.coordinates.map(function(c) { return [c[0], c[1]]; });
-      dynamicRoutes[id] = L.polyline(lls, {
-        color: color,
-        weight: 5.5,
+    if (latLngs && latLngs.length >= 2) {
+      // Outer route casing (soft blue glow)
+      casingPoly = L.polyline(latLngs, {
+        color: '#2563EB',
+        weight: 8,
+        opacity: 0.24,
+        lineCap: 'round',
+        lineJoin: 'round',
+        interactive: false
+      }).addTo(map);
+
+      // Main route polyline (vibrant navy blue)
+      routePoly = L.polyline(latLngs, {
+        color: '#04325E',
+        weight: 5,
         opacity: 0.95,
         lineCap: 'round',
         lineJoin: 'round'
       }).addTo(map);
 
-      if (d.stops && d.stops.length > 0) {
-        drawStops('live_' + id, d.stops, color);
-      }
     }
+
+    // 3. Draw Stops with Crisp White Callout Badges
+    if (STOPS && STOPS.length > 0) {
+      STOPS.forEach(function(s) {
+        var labelClass = s.labelSide === 'left' ? 'stop-label-left' : 'stop-label-right';
+        var stopIcon = L.divIcon({
+          className: '',
+          iconSize: [14, 14],
+          iconAnchor: [7, 7],
+          html: '<div class="stop-marker-wrap"><div class="stop-dot"></div><div class="stop-label-pill ' + labelClass + '">' + s.name + '</div></div>'
+        });
+        L.marker([s.latitude, s.longitude], { icon: stopIcon, zIndexOffset: 700 }).addTo(map);
+      });
+    }
+
+    // Bus Top-Down SVG graphic
+    function busSvg() {
+      return '<svg width="24" height="46" viewBox="0 0 22 42" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+        '<rect x="1" y="3" width="20" height="36" rx="4" fill="#04325E" stroke="#FFFFFF" stroke-width="1.5"/>' +
+        '<polygon points="11,0 6,6 16,6" fill="#FFFFFF"/>' +
+        '<rect x="3" y="4" width="16" height="7" rx="2" fill="#93C5FD" stroke="rgba(255,255,255,0.6)" stroke-width="0.5"/>' +
+        '<rect x="1.5" y="13" width="2.5" height="16" rx="1.2" fill="rgba(15,23,42,0.5)"/>' +
+        '<rect x="18" y="13" width="2.5" height="16" rx="1.2" fill="rgba(15,23,42,0.5)"/>' +
+        '<rect x="3" y="1.5" width="5" height="2" rx="0.8" fill="#FEF08A"/>' +
+        '<rect x="14" y="1.5" width="5" height="2" rx="0.8" fill="#FEF08A"/>' +
+        '<rect x="3" y="38.5" width="5" height="2" rx="0.8" fill="#EF4444"/>' +
+        '<rect x="14" y="38.5" width="5" height="2" rx="0.8" fill="#EF4444"/>' +
+        '</svg>';
+    }
+
+    function createBusMarker(pos, heading) {
+      var icon = L.divIcon({
+        className: '',
+        iconSize: [56, 56],
+        iconAnchor: [28, 28],
+        html: '<div class="bus-marker-wrap">' +
+          '<div class="bus-badge-pill"> BUS ' + TARGET_BUS + '</div>' +
+          '<div class="bus-vehicle" style="transform:rotate(' + heading + 'deg)">' + busSvg() + '</div>' +
+          '</div>'
+      });
+      busMarker = L.marker(pos, { icon: icon, zIndexOffset: 1200 }).addTo(map);
+      busLatLng = pos;
+    }
+
+    // ── Pre-calculate Route Segments & Cumulative Distances ──────────────────
+    function buildRouteSegments(points) {
+      var segs = [];
+      var total = 0;
+      if (!points || points.length < 2) return { segs: segs, total: 0 };
+
+      for (var i = 0; i < points.length - 1; i++) {
+        var p1 = points[i];
+        var p2 = points[i + 1];
+
+        var midLat = (p1[0] + p2[0]) * 0.5 * Math.PI / 180;
+        var cosLat = Math.cos(midLat);
+        var dx = (p2[1] - p1[1]) * cosLat * 111320;
+        var dy = (p2[0] - p1[0]) * 110574;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+
+        var bearing = (Math.atan2(dx, dy) * 180 / Math.PI + 360) % 360;
+
+        segs.push({
+          start: p1,
+          end: p2,
+          distance: dist,
+          cumStart: total,
+          cumEnd: total + dist,
+          bearing: Math.round(bearing),
+          dx: dx,
+          dy: dy,
+          distSq: dx * dx + dy * dy
+        });
+        total += dist;
+      }
+      return { segs: segs, total: total };
+    }
+
+    var routeData = buildRouteSegments(latLngs);
+
+    // ── Snap coordinate onto Route Polyline (finding cumulative route distance) ──
+    function snapPointToRoute(p, segs) {
+      if (!segs || segs.length === 0) return 0;
+      var bestDistSq = Infinity;
+      var bestRouteDist = 0;
+
+      for (var i = 0; i < segs.length; i++) {
+        var s = segs[i];
+        if (s.distSq < 0.0001) continue;
+
+        var midLat = (s.start[0] + s.end[0]) * 0.5 * Math.PI / 180;
+        var cosLat = Math.cos(midLat);
+        var px = (p[1] - s.start[1]) * cosLat * 111320;
+        var py = (p[0] - s.start[0]) * 110574;
+
+        var t = (px * s.dx + py * s.dy) / s.distSq;
+        if (t < 0) t = 0;
+        else if (t > 1) t = 1;
+
+        var projX = s.dx * t;
+        var projY = s.dy * t;
+        var dSq = (px - projX) * (px - projX) + (py - projY) * (py - projY);
+
+        if (dSq < bestDistSq) {
+          bestDistSq = dSq;
+          bestRouteDist = s.cumStart + t * s.distance;
+        }
+      }
+      return bestRouteDist;
+    }
+
+    // ── Get Exact [lat, lng] and Road Bearing at Cumulative Distance ────────
+    function getPointAtRouteDistance(dist, segs, total) {
+      if (!segs || segs.length === 0) return { latLng: [USER_LAT, USER_LNG], bearing: 0 };
+      var d = Math.max(0, Math.min(dist, total));
+
+      var seg = segs[0];
+      for (var i = 0; i < segs.length; i++) {
+        if (d <= segs[i].cumEnd || i === segs.length - 1) {
+          seg = segs[i];
+          break;
+        }
+      }
+
+      var offset = d - seg.cumStart;
+      var t = seg.distance > 0 ? Math.max(0, Math.min(1, offset / seg.distance)) : 0;
+      var lat = seg.start[0] + (seg.end[0] - seg.start[0]) * t;
+      var lng = seg.start[1] + (seg.end[1] - seg.start[1]) * t;
+
+      return {
+        latLng: [lat, lng],
+        bearing: seg.bearing
+      };
+    }
+
+    var currentRouteDistance = 0;
+    var targetRouteDistance = 0;
+    var currentBusSpeedKmh = 28;
+    var isInitialized = false;
+    var lastAnimTime = 0;
+
+    function smoothRotateHeading(currentH, targetH) {
+      var diff = ((targetH - currentH + 180) % 360) - 180;
+      return currentH + diff;
+    }
+
+    // Default bus placement directly on the real road route with road tangent heading
+    if (routeData.total > 0) {
+      var initialDist = routeData.total * 0.15;
+      currentRouteDistance = initialDist;
+      targetRouteDistance = initialDist;
+      var initPos = getPointAtRouteDistance(initialDist, routeData.segs, routeData.total);
+      currentBusHeading = initPos.bearing;
+      createBusMarker(initPos.latLng, currentBusHeading);
+      isInitialized = true;
+    }
+
+    // ── 60fps Smooth Road-Locked Movement Engine (requestAnimationFrame) ──
+    function animateBus(timestamp) {
+      if (!lastAnimTime) lastAnimTime = timestamp;
+      var dt = (timestamp - lastAnimTime) / 1000;
+      lastAnimTime = timestamp;
+
+      // Handle large time gaps (e.g. app in background or frame drop)
+      if (dt > 0.1) dt = 0.1;
+      if (dt < 0.001) dt = 0.001;
+
+      if (routeData.total > 0 && busMarker && isInitialized) {
+        var distDiff = targetRouteDistance - currentRouteDistance;
+
+        if (Math.abs(distDiff) > 0.05) {
+          var baseSpeedMps = (currentBusSpeedKmh * 1000) / 3600;
+          var catchUpSpeedMps = Math.abs(distDiff) / 1.6;
+          var effectiveSpeedMps = Math.max(baseSpeedMps * 0.6, Math.min(baseSpeedMps * 2.2, catchUpSpeedMps));
+          var moveDist = effectiveSpeedMps * dt;
+
+          if (distDiff > 0) {
+            currentRouteDistance = Math.min(targetRouteDistance, currentRouteDistance + moveDist);
+          } else {
+            currentRouteDistance = Math.max(targetRouteDistance, currentRouteDistance - moveDist);
+          }
+
+          var state = getPointAtRouteDistance(currentRouteDistance, routeData.segs, routeData.total);
+          busLatLng = state.latLng;
+          busMarker.setLatLng(state.latLng);
+
+          currentBusHeading = smoothRotateHeading(currentBusHeading, state.bearing);
+          var el = busMarker.getElement();
+          if (el) {
+            var v = el.querySelector('.bus-vehicle');
+            if (v) v.style.transform = 'rotate(' + currentBusHeading + 'deg)';
+          }
+
+          if (isFollowing) {
+            map.panTo(state.latLng, { animate: false });
+          }
+        }
+      }
+
+      requestAnimationFrame(animateBus);
+    }
+    requestAnimationFrame(animateBus);
 
     function postRN(obj) {
       if (window.ReactNativeWebView) {
@@ -634,290 +402,598 @@ const buildMapHtml = (backendUrl: string, waypointsJson: string): string => `<!D
       }
     }
 
-    //  Exposed to React Native 
-    window.setFollowMode = function(on, busId) {
-      isFollowing = !!on;
-      if (busId) followBusId = busId;
-      if (!on) followBusId = null;
-    };
+    // ── Auto-Fit Camera to User, Bus, Stops, and Road Route 
+    function computeFullBounds() {
+      var b = L.latLngBounds([]);
 
-    window.selectRoute = function(rNum) {
-      activeRouteId = rNum;
-      if (!rNum || rNum === 'ALL') {
-        Object.keys(staticRoutes).forEach(function(k) {
-          staticRoutes[k].casing.setStyle({ opacity: 0.28, weight: 7 });
-          staticRoutes[k].poly.setStyle({ opacity: 0.95, weight: 4.5 });
-        });
-        map.setView([-1.9441, 30.0750], 13, { animate: true });
-        return;
+      // 1. All road route points
+      if (latLngs && latLngs.length >= 2) {
+        b.extend(latLngs);
       }
-      Object.keys(staticRoutes).forEach(function(k) {
-        if (k === rNum) {
-          staticRoutes[k].casing.setStyle({ opacity: 0.55, weight: 9 });
-          staticRoutes[k].poly.setStyle({ opacity: 1.0, weight: 6 });
-          staticRoutes[k].poly.bringToFront();
-        } else {
-          staticRoutes[k].casing.setStyle({ opacity: 0.08, weight: 3 });
-          staticRoutes[k].poly.setStyle({ opacity: 0.25, weight: 2 });
+
+      // 2. All route stops
+      if (STOPS && STOPS.length > 0) {
+        for (var i = 0; i < STOPS.length; i++) {
+          b.extend([STOPS[i].latitude, STOPS[i].longitude]);
         }
-      });
-      if (routeBounds[rNum]) {
-        map.fitBounds(routeBounds[rNum], { padding: [70, 70], maxZoom: 15, animate: true });
+      }
+
+      // 3. User's current location (validate not (0,0) or NaN)
+      if (typeof USER_LAT === 'number' && !isNaN(USER_LAT) && typeof USER_LNG === 'number' && !isNaN(USER_LNG) &&
+          Math.abs(USER_LAT) > 0.01 && Math.abs(USER_LNG) > 0.01) {
+        b.extend([USER_LAT, USER_LNG]);
+      }
+
+      // 4. Bus marker location
+      if (busLatLng) {
+        b.extend(busLatLng);
+      }
+
+      return b;
+    }
+
+    function fitAllInView(animated) {
+      if (!map) return;
+      map.invalidateSize({ pan: false });
+      var b = computeFullBounds();
+      if (b && b.isValid()) {
+        map.fitBounds(b, {
+          paddingTopLeft: [35, 95],      // [left, top] - clear status bar & top navigation
+          paddingBottomRight: [35, 305], // [right, bottom] - clear bottom card completely!
+          maxZoom: 16,
+          animate: !!animated
+        });
+      }
+    }
+    window.fitAllInView = fitAllInView;
+
+    // Trigger auto-fit bounds on initial load and after container layout settles
+    fitAllInView(false);
+    setTimeout(function() { fitAllInView(false); }, 100);
+    setTimeout(function() { fitAllInView(false); }, 300);
+    setTimeout(function() { fitAllInView(false); }, 750);
+    window.addEventListener('load', function() { setTimeout(function() { fitAllInView(false); }, 100); });
+    window.addEventListener('resize', function() { fitAllInView(false); });
+
+    var hasAutoFittedLiveBus = false;
+
+    // Exposed controls to React Native
+    window.recenterMap = function() {
+      fitAllInView(true);
+    };
+
+    window.toggleTileLayer = function() {
+      map.removeLayer(tileLayers[currentTileIndex]);
+      currentTileIndex = (currentTileIndex + 1) % tileLayers.length;
+      tileLayers[currentTileIndex].addTo(map);
+    };
+
+    window.setFollowMode = function(enabled) {
+      isFollowing = !!enabled;
+      if (isFollowing && busLatLng) {
+        map.panTo(busLatLng, { animate: true });
       }
     };
 
-    //  Socket.IO Connection  
+    // Socket.IO for Live Bus Updates
     var sock = io(BACKEND_URL, {
       transports: ['websocket', 'polling'],
-      reconnectionAttempts: 25,
+      reconnectionAttempts: 15,
       reconnectionDelay: 2000,
-      timeout: 15000,
     });
 
     sock.on('connect', function() {
-      document.getElementById('conn-bar').classList.remove('loading');
-      sock.emit('sync:buses');
       postRN({ type: 'connected' });
+      // Re-request state sync on every connection (handles reconnects too)
+      sock.emit('sync:buses');
     });
 
-    sock.on('disconnect', function(r) {
-      document.getElementById('conn-bar').classList.add('loading');
-      postRN({ type: 'disconnected', reason: r });
-    });
+    // Monotonic sequence guard: per-bus last seen sequence number.
+    // Any packet arriving with sequence <= this value is stale and discarded.
+    var lastSeenSequence = -1;
+    // Track the last accepted routeProgress for geometry remapping
+    var lastAcceptedProgress = -1;
 
-    sock.on('connect_error', function(e) {
-      postRN({ type: 'error', message: e.message });
-    });
+    function handleBusUpdate(data) {
+      if (!data) return;
+      var matchesBus = (data.busNumber && data.busNumber.toString() === TARGET_BUS.toString()) ||
+                       (data.routeNumber && data.routeNumber.toString() === TARGET_ROUTE.toString());
+      if (!matchesBus) return;
 
-    function handleLocation(d) {
-      updateBus(d);
+      //  Stale Packet Guard 
+      // Discard out-of-order UDP/WS packets using the server-assigned sequence
+      // number. This is the primary fix for backward bus movement.
+      if (typeof data.sequence === 'number') {
+        if (data.sequence <= lastSeenSequence) return; // stale — discard
+        lastSeenSequence = data.sequence;
+      }
+
+      //  Trip Completion 
+      if (data.isDestinationReached && data.simulationStatus === 'STOPPED') {
+        // Snap bus to exact end of route and freeze
+        targetRouteDistance = routeData.total;
+        currentRouteDistance = routeData.total;
+        var endState = getPointAtRouteDistance(routeData.total, routeData.segs, routeData.total);
+        if (busMarker) busMarker.setLatLng(endState.latLng);
+        busLatLng = endState.latLng;
+        postRN({
+          type: 'telemetry',
+          speed: 0,
+          heading: currentBusHeading,
+          etaMinutes: 0,
+          currentStop: data.currentStop,
+          nextStop: data.nextStop || 'Destination Reached',
+          distanceToNextStopKm: 0,
+          isMoving: false,
+          motionStatus: 'PARKED',
+        });
+        return;
+      }
+
+      if (data.speed !== undefined && data.speed > 0) {
+        currentBusSpeedKmh = data.speed;
+      }
+
+      //  Authoritative Route Progress (primary path) 
+      // The server sends routeProgress (0.0–1.0) which is the unambiguous
+      // traveledDistance/totalDistance ratio. This avoids the lat/lng snap
+      // ambiguity that caused apparent backward movement.
+      var newTargetDist;
+      if (typeof data.routeProgress === 'number' && routeData.total > 0) {
+        // Clamp to [0, 1] to be safe
+        var progress = Math.max(0, Math.min(1, data.routeProgress));
+        newTargetDist = progress * routeData.total;
+      } else if (data.latitude != null && data.longitude != null) {
+        // Fallback: snap lat/lng to route (older server without routeProgress)
+        newTargetDist = snapPointToRoute([data.latitude, data.longitude], routeData.segs);
+      } else {
+        return;                 // no usable position data
+      }
+
+      if (!isInitialized) {
+        // First update: place bus exactly at the server's reported position
+        currentRouteDistance = newTargetDist;
+        targetRouteDistance = newTargetDist;
+        var initState = getPointAtRouteDistance(currentRouteDistance, routeData.segs, routeData.total);
+        busLatLng = initState.latLng;
+        currentBusHeading = initState.bearing;
+        if (!busMarker) {
+          createBusMarker(initState.latLng, currentBusHeading);
+        } else {
+          busMarker.setLatLng(initState.latLng);
+        }
+        isInitialized = true;
+      } else {
+        //  Monotonic Forward-Only Enforcement 
+        // Never let the target jump backward; this prevents visual regression
+        // even if a stale packet somehow passes the sequence guard.
+        // Exception: allow small backward correction (≤ 50m) to handle route
+        // resets or minor OSRM geometry mismatches.
+        var candidateDiff = newTargetDist - targetRouteDistance;
+        if (candidateDiff >= 0) {
+          // Normal forward movement: accept directly
+          targetRouteDistance = newTargetDist;
+        } else if (candidateDiff > -50) {
+          // Tiny backward (<50m): minor correction acceptable
+          targetRouteDistance = newTargetDist;
+        }
+        // Large backward jump (>50m): silently ignore — likely a stale packet
+      }
+
+      if (!hasAutoFittedLiveBus) {
+        hasAutoFittedLiveBus = true;
+        setTimeout(function() { fitAllInView(false); }, 150);
+      }
+
+      // Remember the last accepted progress for geometry remapping
+      lastAcceptedProgress = typeof data.routeProgress === 'number'
+        ? Math.max(0, Math.min(1, data.routeProgress))
+        : (routeData.total > 0 ? currentRouteDistance / routeData.total : 0);
+
       postRN({
         type: 'telemetry',
-        busNumber: d.busNumber,
-        routeNumber: d.routeNumber,
-        routeColor: d.routeColor,
-        speed: d.speed,
-        heading: d.heading,
-        etaMinutes: d.etaMinutes,
-        currentStop: d.currentStop,
-        nextStop: d.nextStop,
-        progress: d.progress,
-        distanceToNextStopKm: d.distanceToNextStopKm,
-        isDestinationReached: d.isDestinationReached,
-        simulationStatus: d.simulationStatus,
+        speed: data.speed,
+        heading: currentBusHeading,
+        etaMinutes: data.etaMinutes,
+        currentStop: data.currentStop,
+        nextStop: data.nextStop,
+        distanceToNextStopKm: data.distanceToNextStopKm || data.distanceKm,
+        isMoving: (data.speed || 0) > 2,
+        motionStatus: (data.speed || 0) > 2 ? 'MOVING' : 'PARKED',
       });
     }
 
-    sock.on('bus:route:geometry', drawRoute);
-    sock.on('bus:location', handleLocation);
-    sock.on('bus:location:update', handleLocation);
+    sock.on('bus:location', handleBusUpdate);
+    sock.on('bus:location:update', handleBusUpdate);
+
+    //  Real OSRM Road Geometry from Server 
+    // The backend emits 'bus:route:geometry' once on trip start (and on reconnect
+    // via syncToSocket). Coordinates arrive as [lat, lng] numeric arrays.
+    sock.on('bus:route:geometry', function(data) {
+      if (!data || !data.coordinates || data.coordinates.length < 2) return;
+      var matches = (data.routeNumber && data.routeNumber.toString() === TARGET_ROUTE.toString()) ||
+                    (data.busNumber && data.busNumber.toString() === TARGET_BUS.toString());
+      if (!matches) return;
+
+      // data.coordinates = [[lat, lng], [lat, lng], ...]
+      var newLatLngs = data.coordinates.map(function(c) {
+        // Support both [lat, lng] array format AND {latitude, longitude} object format
+        if (Array.isArray(c)) return [c[0], c[1]];
+        return [c.latitude, c.longitude];
+      });
+
+      if (newLatLngs.length < 2) return;
+
+      // Store route progress BEFORE rebuilding segments (old total may differ)
+      var progressBeforeRebuild = lastAcceptedProgress >= 0
+        ? lastAcceptedProgress
+        : (routeData.total > 0 ? currentRouteDistance / routeData.total : 0);
+
+      // Rebuild route segments from the real OSRM road geometry
+      latLngs = newLatLngs;
+      routeData = buildRouteSegments(latLngs);
+
+      // Remap route distances into the new geometry's coordinate space
+      if (routeData.total > 0 && progressBeforeRebuild >= 0) {
+        var newDist = progressBeforeRebuild * routeData.total;
+        currentRouteDistance = newDist;
+        targetRouteDistance = newDist;
+        // Move bus marker to correct position in new geometry
+        var remappedState = getPointAtRouteDistance(newDist, routeData.segs, routeData.total);
+        busLatLng = remappedState.latLng;
+        currentBusHeading = remappedState.bearing;
+        if (busMarker) busMarker.setLatLng(remappedState.latLng);
+      }
+
+      // Update the visible polyline with the real road geometry
+      if (routePoly) routePoly.setLatLngs(newLatLngs);
+      if (casingPoly) casingPoly.setLatLngs(newLatLngs);
+
+      // Update stops from server payload if provided
+      if (data.stops && data.stops.length > 0) {
+        STOPS = data.stops;
+      }
+
+      // Re-fit camera to show the real road and all stops
+      setTimeout(function() { fitAllInView(false); }, 150);
+    });
   </script>
 </body>
 </html>`;
-
-
-// MapScreen Component
+};
 
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
   const webViewRef = useRef<WebView>(null);
-  const [isConnected, setIsConnected] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
-  const [followMode, setFollowMode] = useState(false);
-  const [selectedRoute, setSelectedRoute] = useState<string>('ALL');
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [alertsEnabled, setAlertsEnabled] = useState(false);
   const [telemetry, setTelemetry] = useState<Telemetry | null>(null);
 
-  // Pre-serialize waypoints JSON once
-  const waypointsJson = useMemo(() => JSON.stringify(ROUTE_WAYPOINTS), []);
-  const mapHtml = useMemo(() => buildMapHtml(BACKEND_URL, waypointsJson), [waypointsJson]);
+  const params = useLocalSearchParams<{ busId?: string; busNumber?: string; routeName?: string;
+    routeNumber?: string;
+    currentStop?: string;
+    nextStop?: string;
+    speed?: string;
+    motionStatus?: string;
+    distanceKm?: string;
+    etaMinutes?: string;
+    userLat?: string;
+    userLng?: string;
+  }>();
 
-  //  Handle messages from the WebView 
+  const busNumber = params.busNumber || '202';
+  const routeNumber =
+    params.routeNumber ||
+    (busNumber === '101'
+      ? '101'
+      : busNumber === '109'
+      ? '109'
+      : busNumber === '203'
+      ? '203'
+      : busNumber === '204'
+      ? '204'
+      : busNumber === '303'
+      ? '303'
+      : busNumber === '304'
+      ? '304'
+      : busNumber === '305'
+      ? '305'
+      : '202');
+
+  const routeName =
+    params.routeName ||
+    (routeNumber === '101'
+      ? 'Downtown → Nyabugogo'
+      : routeNumber === '109'
+      ? 'Route 109 — Nyabugogo → Remera'
+      : routeNumber === '203'
+      ? 'Nyabugogo → Remera'
+      : routeNumber === '204'
+      ? 'Kimironko → Downtown'
+      : routeNumber === '303'
+      ? 'Route 303 — Nyabugogo → Nyacyonga'
+      : routeNumber === '304'
+      ? 'Route 304 — Nyacyonga → Nyabugogo'
+      : routeNumber === '305'
+      ? 'Route 305 — Nyabugogo → Batsinda → Nyacyonga'
+      : 'Nyabugogo → Kimironko');
+
+  const userLat = params.userLat ? parseFloat(params.userLat) : -1.9400;
+  const userLng = params.userLng ? parseFloat(params.userLng) : 30.1200;
+
+  const currentStop = telemetry?.currentStop || params.currentStop || 'Nyabugogo';
+  const nextStop = telemetry?.nextStop || params.nextStop || 'Kacyiru';
+  const speed = telemetry?.speed != null ? Math.round(telemetry.speed) : (params.speed ? parseInt(params.speed) : 32);
+  const isMoving = telemetry ? telemetry.isMoving : speed > 2;
+  const motionStatus = isMoving ? 'MOVING' : 'PARKED';
+  const distanceKm = telemetry?.distanceToNextStopKm != null ? telemetry.distanceToNextStopKm.toFixed(1) : (params.distanceKm || '1.2');
+  const etaMinutes = telemetry?.etaMinutes != null ? telemetry.etaMinutes : (params.etaMinutes ? parseInt(params.etaMinutes) : 3);
+
+  const waypoints = useMemo(() => {
+    if (ROUTE_WAYPOINTS[routeNumber] && ROUTE_WAYPOINTS[routeNumber].length > 0) {
+      return ROUTE_WAYPOINTS[routeNumber];
+    }
+    const stops = DEFAULT_ROUTE_STOPS[routeNumber];
+    if (stops && stops.length > 0) {
+      return stops.map((s) => ({ latitude: s.latitude, longitude: s.longitude }));
+    }
+    return ROUTE_WAYPOINTS['202'] || [];
+  }, [routeNumber]);
+
+  const mapHtml = useMemo(() => {
+    return buildSingleBusMapHtml(
+      BACKEND_URL,
+      routeNumber,
+      busNumber,
+      waypoints,
+      userLat,
+      userLng,
+    );
+  }, [routeNumber, busNumber, waypoints, userLat, userLng]);
+
   const handleMessage = useCallback((event: { nativeEvent: { data: string } }) => {
     try {
       const msg = JSON.parse(event.nativeEvent.data);
-      if (msg.type === 'connected') setIsConnected(true);
-      if (msg.type === 'disconnected') setIsConnected(false);
-      if (msg.type === 'telemetry') setTelemetry(msg as Telemetry);
-      if (msg.type === 'routeSelected') setSelectedRoute(msg.routeNumber);
+      if (msg.type === 'telemetry') {
+        setTelemetry(msg as Telemetry);
+      }
     } catch {
-      // ignore malformed messages
+      // Ignore malformed message
     }
   }, []);
 
-  //  Select route filter pill 
-  const handleSelectRoute = useCallback((routeId: string) => {
-    setSelectedRoute(routeId);
-    webViewRef.current?.injectJavaScript(`window.selectRoute('${routeId}'); true;`);
+  const handleRecenter = useCallback(() => {
+    webViewRef.current?.injectJavaScript('window.recenterMap(); true;');
   }, []);
 
-  //  Toggle follow/track mode
+  const handleToggleLayer = useCallback(() => {
+    webViewRef.current?.injectJavaScript('window.toggleTileLayer(); true;');
+  }, []);
+
   const handleTrackBus = useCallback(() => {
-    const next = !followMode;
-    setFollowMode(next);
+    const next = !isFollowing;
+    setIsFollowing(next);
     webViewRef.current?.injectJavaScript(`window.setFollowMode(${next}); true;`);
-  }, [followMode]);
+  }, [isFollowing]);
 
-  //  Derived display values
-  const etaDisplay = telemetry?.isDestinationReached ? 'Arrived'
-    : telemetry?.etaMinutes ? `${telemetry.etaMinutes} min`
-      : '—';
-  const distDisplay = telemetry?.distanceToNextStopKm != null
-    ? `${telemetry.distanceToNextStopKm.toFixed(1)} km` : '—';
-  const speedDisplay = telemetry?.speed ? `${telemetry.speed} km/h` : '0 km/h';
-  const busDisplay = telemetry?.busNumber ? `Bus ${telemetry.busNumber}` : 'Bus 101';
-  const routeDisplay = telemetry
-    ? `${telemetry.currentStop} → ${telemetry.nextStop}`
-    : 'Connecting to live bus telemetry...';
-
-  const simRunning = telemetry?.simulationStatus === 'RUNNING';
-  const simPaused = telemetry?.simulationStatus === 'PAUSED';
-  const statusText = simRunning ? 'On Trip' : simPaused ? 'Paused' : 'Standby';
-  const statusColor = simRunning ? '#059669' : simPaused ? '#D97706' : '#94A3B8';
-  const statusBg = simRunning ? '#ECFDF5' : simPaused ? '#FFFBEB' : '#F8FAFC';
-  const statusIcon = simRunning ? 'checkmark-circle-outline' : simPaused ? 'pause-circle-outline' : 'radio-button-off-outline';
+  const handleToggleAlerts = useCallback(() => {
+    const next = !alertsEnabled;
+    setAlertsEnabled(next);
+    Alert.alert(
+      next ? 'Alerts Activated' : 'Alerts Disabled',
+      next
+        ? `You will receive push notifications when Bus ${busNumber} approaches your stop.`
+        : `Arrival notifications for Bus ${busNumber} have been paused.`,
+    );
+  }, [alertsEnabled, busNumber]);
 
   return (
     <View style={styles.container}>
+      {/* Top Header Bar */}
+      <View style={[styles.topBar, { paddingTop: insets.top + 6 }]}>
+        <TouchableOpacity
+          style={styles.topBarBtn}
+          onPress={() => router.back()}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+        </TouchableOpacity>
 
-      {/*  Full-screen interactive Leaflet map  */}
+        <View style={styles.titleBox}>
+          <Text style={styles.titleText}>Bus {busNumber}</Text>
+          <Text style={styles.subtitleText}>Live Route</Text>
+        </View>
+
+        {/* Right balance spacer to keep title centered */}
+        <View style={{ width: 40 }} />
+      </View>
+
+      {/* Full-Screen Interactive Leaflet Map */}
       <WebView
         ref={webViewRef}
         source={{ html: mapHtml }}
         onMessage={handleMessage}
-        onLoad={() => setMapLoaded(true)}
+        onLoad={() => {
+          setMapLoaded(true);
+          webViewRef.current?.injectJavaScript(
+            'window.fitAllInView && window.fitAllInView(false); true;',
+          );
+        }}
         style={StyleSheet.absoluteFillObject}
         originWhitelist={['*']}
         javaScriptEnabled
         domStorageEnabled
-        allowUniversalAccessFromFileURLs
-        allowFileAccess
         scrollEnabled={false}
       />
 
-      {/*  Loading shimmer while map initializes  */}
+      {/* Loading Indicator */}
       {!mapLoaded && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#04325E" />
-          <Text style={styles.loadingText}>Loading Kigali Transit Map…</Text>
+          <Text style={styles.loadingText}>Loading Bus {busNumber} Route...</Text>
         </View>
       )}
 
-      {/*  Top header overlay  */}
-      <View style={[styles.topHeader, { paddingTop: insets.top + 8 }]}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.8}>
-          <Ionicons name="arrow-back" size={20} color="#0F172A" />
-        </TouchableOpacity>
-
-        <View style={styles.gpsBadge}>
-          <View style={[styles.dot, { backgroundColor: isConnected ? '#10B981' : '#F59E0B' }]} />
-          <Text style={styles.gpsText}>
-            {isConnected ? 'Live GPS Active' : 'Connecting…'}
-          </Text>
-        </View>
-      </View>
-
-      {/*  Route Filter Pill Bar  */}
-      <View style={[styles.routeBar, { top: insets.top + 60 }]}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.routeScroll}>
-          {ROUTE_TABS.map((r) => {
-            const isSel = selectedRoute === r.id;
-            return (
-              <TouchableOpacity
-                key={r.id}
-                onPress={() => handleSelectRoute(r.id)}
-                style={[
-                  styles.routePill,
-                  isSel && { backgroundColor: r.color, borderColor: r.color },
-                ]}
-                activeOpacity={0.8}
-              >
-                {r.id !== 'ALL' && (
-                  <View style={[styles.routeDot, { backgroundColor: isSel ? '#FFFFFF' : r.color }]} />
-                )}
-                <Text style={[styles.routePillText, isSel && styles.routePillTextActive]}>
-                  {r.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
-
-      {/*  Bottom info card */}
-      <View style={[styles.bottomCard, { paddingBottom: insets.bottom + 12 }]}>
-
-        {/* Card header */}
-        <View style={styles.cardHeader}>
-          <View>
-            <View style={styles.busTitleRow}>
-              <Text style={styles.busTitle}>{busDisplay}</Text>
-              <View style={[styles.statusBadge, { backgroundColor: statusBg }]}>
-                <Ionicons name={statusIcon as any} size={13} color={statusColor} />
-                <Text style={[styles.statusBadgeText, { color: statusColor }]}>{statusText}</Text>
-              </View>
-            </View>
-            <Text style={styles.busRouteText}>{routeDisplay}</Text>
-          </View>
-        </View>
-
-        {/* Stats row */}
-        <View style={styles.statsRow}>
-          <View style={styles.statCol}>
-            <View style={styles.statLabelRow}>
-              <Ionicons name="time-outline" size={14} color="#64748B" />
-              <Text style={styles.statLabel}>ETA</Text>
-            </View>
-            <Text style={styles.statValue}>{etaDisplay}</Text>
-          </View>
-
-          <View style={styles.statCol}>
-            <View style={styles.statLabelRow}>
-              <MaterialIcons name="alt-route" size={14} color="#64748B" />
-              <Text style={styles.statLabel}>Distance</Text>
-            </View>
-            <Text style={styles.statValue}>{distDisplay}</Text>
-          </View>
-
-          <View style={styles.statCol}>
-            <View style={styles.statLabelRow}>
-              <Ionicons name="speedometer-outline" size={14} color="#64748B" />
-              <Text style={styles.statLabel}>Speed</Text>
-            </View>
-            <Text style={styles.statValue}>{speedDisplay}</Text>
-          </View>
-        </View>
-
-        {/* Track button */}
+      {/* Floating Action Controls on Map (Top-Right) */}
+      <View style={[styles.mapFloatingControls, { top: insets.top + 74 }]}>
         <TouchableOpacity
-          style={[styles.trackButton, followMode && styles.trackButtonActive]}
+          style={styles.mapFloatingBtn}
           activeOpacity={0.85}
-          onPress={handleTrackBus}
+          onPress={handleRecenter}
         >
-          <Feather name={followMode ? 'crosshair' : 'navigation'} size={18} color="#FFFFFF" />
-          <Text style={styles.trackButtonText}>
-            {followMode ? 'Following Bus' : 'Track Bus'}
-          </Text>
+          <MaterialIcons name="my-location" size={20} color="#04325E" />
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.mapFloatingBtn}
+          activeOpacity={0.85}
+          onPress={handleToggleLayer}
+        >
+          <MaterialIcons name="layers" size={20} color="#04325E" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Bottom Sheet Card */}
+      <View style={[styles.bottomCard, { paddingBottom: insets.bottom + 16 }]}>
+        {/* Drag Handle */}
+        <View style={styles.dragHandle} />
+
+        {/* Card Header: Bus Badge & Motion Status */}
+        <View style={styles.cardHeaderRow}>
+          <View style={styles.bottomBusBadge}>
+            <Text style={styles.bottomBusBadgeText}>BUS {busNumber}</Text>
+          </View>
+
+          {isMoving ? (
+            <View style={styles.bottomMovingBadge}>
+              <View style={styles.bottomLiveDot} />
+              <Text style={styles.bottomLiveText}>MOVING</Text>
+            </View>
+          ) : (
+            <View style={styles.bottomParkedBadge}>
+              <View style={styles.bottomParkedDot} />
+              <Text style={styles.bottomParkedText}>PARKED</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Route Name & Next Stop */}
+        <Text style={styles.bottomRouteTitle}>{routeName}</Text>
+        <Text style={styles.bottomNextStopRow}>
+          <Text style={styles.nextStopLabel}>Next stop: </Text>
+          <Text style={styles.nextStopVal}>{nextStop}</Text>
+        </Text>
+
+        {/* 3-Column Stats Row with Icons */}
+        <View style={styles.statsCardRow}>
+          <View style={styles.statCol}>
+            <View style={styles.statLabelRow}>
+              <Ionicons name="time-outline" size={13} color="#64748B" />
+              <Text style={styles.statLabelText}>ETA to next stop</Text>
+            </View>
+            <Text style={styles.statValText}>{etaMinutes} min</Text>
+          </View>
+
+          <View style={styles.statCol}>
+            <View style={styles.statLabelRow}>
+              <Ionicons name="location-outline" size={13} color="#64748B" />
+              <Text style={styles.statLabelText}>Distance to next stop</Text>
+            </View>
+            <Text style={styles.statValText}>{distanceKm} km</Text>
+          </View>
+
+          <View style={styles.statCol}>
+            <View style={styles.statLabelRow}>
+              <Ionicons name="speedometer-outline" size={13} color="#64748B" />
+              <Text style={styles.statLabelText}>Speed</Text>
+            </View>
+            <Text style={styles.statValText}>{speed} km/h</Text>
+          </View>
+        </View>
+
+        {/* Bottom Actions: Track Bus + Alerts Button */}
+        <View style={styles.bottomActionRow}>
+          <TouchableOpacity
+            style={[styles.trackBusBtn, isFollowing && styles.trackBusBtnActive]}
+            activeOpacity={0.85}
+            onPress={handleTrackBus}
+          >
+            <MaterialCommunityIcons name="broadcast" size={18} color="#FFFFFF" />
+            <Text style={styles.trackBusBtnText}>
+              {isFollowing ? 'FOLLOWING BUS' : 'TRACK BUS'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[styles.alertsBtn, alertsEnabled && styles.alertsBtnActive]}  activeOpacity={0.85}
+            onPress={handleToggleAlerts}
+          >
+            <Ionicons name={alertsEnabled ? 'notifications' : 'notifications-outline'}  size={17}
+              color={alertsEnabled ? '#FFFFFF' : '#04325E'}
+            />
+            <Text style={[styles.alertsBtnText, alertsEnabled && styles.alertsBtnTextActive]}>
+              Alerts
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
 }
 
-
-// Styles
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#04325E',
   },
 
+  
+  topBar: {
+    backgroundColor: '#04325E',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+    zIndex: 20,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+  },
+  topBarBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  titleBox: {
+    alignItems: 'center',
+  },
+  titleText: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.2,
+  },
+  subtitleText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#93C5FD',
+    marginTop: 1,
+  },
+
+  // Loading Overlay
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#E8EDF2',
+    backgroundColor: '#F8FAFC',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
+    zIndex: 10,
   },
   loadingText: {
     fontSize: 14,
@@ -925,161 +1001,156 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
 
-  // Top header
-  topHeader: {
+  // Map Floating Action Controls
+  mapFloatingControls: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    zIndex: 10,
+    right: 16,
+    gap: 10,
+    zIndex: 15,
   },
-  backBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  mapFloatingBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
+    shadowOpacity: 0.14,
     shadowRadius: 5,
     elevation: 4,
-  },
-  gpsBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
-    gap: 6,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  gpsText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#1E293B',
   },
 
-  // Route filter pills
-  routeBar: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    zIndex: 10,
-  },
-  routeScroll: {
-    paddingHorizontal: 16,
-    gap: 8,
-  },
-  routePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 13,
-    paddingVertical: 7,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
-    gap: 6,
-  },
-  routeDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-  },
-  routePillText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#334155',
-  },
-  routePillTextActive: {
-    color: '#FFFFFF',
-  },
-
-  // Bottom card
+  // Bottom Sheet Card
   bottomCard: {
     position: 'absolute',
-    left: 16,
-    right: 16,
     bottom: 0,
+    left: 0,
+    right: 0,
     backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 20,
-    paddingBottom: 24,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 10,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
-    borderWidth: 1,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 12,
+    borderTopWidth: 1,
     borderColor: '#F1F5F9',
   },
-  cardHeader: {
-    marginBottom: 16,
+  dragHandle: {
+    width: 38,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#CBD5E1',
+    alignSelf: 'center',
+    marginBottom: 12,
   },
-  busTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  busTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
-    gap: 4,
-  },
-  statusBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  busRouteText: {
-    fontSize: 14,
-    color: '#64748B',
-    marginTop: 4,
-    fontWeight: '500',
-  },
-
-  // Stats row
-  statsRow: {
+  cardHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 14,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    marginBottom: 10,
+  },
+  bottomBusBadge: {
+    backgroundColor: '#04325E',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  bottomBusBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+  },
+  bottomMovingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+  },
+  bottomLiveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#16A34A',
+  },
+  bottomLiveText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#15803D',
+    letterSpacing: 0.4,
+  },
+  bottomParkedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+  },
+  bottomParkedDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#64748B',
+  },
+  bottomParkedText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#475569',
+    letterSpacing: 0.4,
+  },
+  bottomRouteTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 4,
+  },
+  bottomNextStopRow: {
+    fontSize: 13,
+    marginBottom: 14,
+  },
+  nextStopLabel: {
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  nextStopVal: {
+    color: '#04325E',
+    fontWeight: '800',
+  },
+
+  // Stats Card Row
+  statsCardRow: {
+    flexDirection: 'row',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     marginBottom: 16,
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   statCol: {
     flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 2,
   },
   statLabelRow: {
     flexDirection: 'row',
@@ -1087,33 +1158,67 @@ const styles = StyleSheet.create({
     gap: 4,
     marginBottom: 4,
   },
-  statLabel: {
-    fontSize: 12,
-    color: '#64748B',
+  statLabelText: {
+    fontSize: 10,
     fontWeight: '600',
+    color: '#64748B',
   },
-  statValue: {
-    fontSize: 20,
+  statValText: {
+    fontSize: 15,
     fontWeight: '800',
-    color: '#0F172A',
+    color: '#04325E',
   },
 
-  // Track button
-  trackButton: {
-    backgroundColor: '#04325E',
-    borderRadius: 14,
-    paddingVertical: 15,
+  // Bottom Buttons
+  bottomActionRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
-  trackButtonActive: {
+  trackBusBtn: {
+    flex: 1,
+    backgroundColor: '#04325E',
+    borderRadius: 12,
+    paddingVertical: 13,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: '#04325E',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.18,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  trackBusBtnActive: {
     backgroundColor: '#059669',
   },
-  trackButtonText: {
+  trackBusBtnText: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+  },
+  alertsBtn: {
+    paddingHorizontal: 18,
+    paddingVertical: 13,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#04325E',
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  alertsBtnActive: {
+    backgroundColor: '#04325E',
+  },
+  alertsBtnText: {
+    color: '#04325E',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  alertsBtnTextActive: {
+    color: '#FFFFFF',
   },
 });

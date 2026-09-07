@@ -1,34 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  ActivityIndicator,
-} from 'react-native';
-import {
-  Ionicons,
-  MaterialIcons,
-  MaterialCommunityIcons,
-  FontAwesome5,
-} from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text,TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert,} from 'react-native';
+import {Ionicons,MaterialIcons,MaterialCommunityIcons,FontAwesome5,} from '@expo/vector-icons';
 import { router } from 'expo-router';
 import * as Location from 'expo-location';
 import { io, Socket } from 'socket.io-client';
 import Header from '../components/Header';
-import {
-  getNearbyStops,
-  getActiveBuses,
-  getNearbyBusesForDestination,
-  getUpcomingTrip,
-  NearbyStop,
-  ActiveBus,
-  RecommendedBus,
-  UpcomingTrip,
-} from '../services/busService';
+import {getNearbyStops,getNearbyBuses,getNearbyBusesForDestination,getActiveBuses,NearbyStop,ActiveBus,RecommendedBus,} from '../services/busService';
 import { BACKEND_URL } from '../constants/config';
 
 const FALLBACK_LAT = -1.9400;
@@ -49,106 +26,292 @@ function calcDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number):
 
 export default function HomeScreen() {
   const [locationName, setLocationName] = useState<string>(FALLBACK_LOCATION_NAME);
-  const [coords, setCoords] = useState<{ latitude: number; longitude: number }>({
-    latitude: FALLBACK_LAT,
-    longitude: FALLBACK_LNG,
-  });
+  const [coords, setCoords] = useState<{ latitude: number; longitude: number }>({latitude: FALLBACK_LAT, longitude: FALLBACK_LNG,});
   const [nearbyStop, setNearbyStop] = useState<NearbyStop | null>(null);
+  const [nearbyBuses, setNearbyBuses] = useState<RecommendedBus[]>([]);
   const [activeBuses, setActiveBuses] = useState<ActiveBus[]>([]);
-  const [upcomingTrip, setUpcomingTrip] = useState<UpcomingTrip | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Smart Bus Discovery State
+
   const [destination, setDestination] = useState<string>('');
-  const [searchedDestination, setSearchedDestination] = useState<string | null>(null);
-  const [discoveredBuses, setDiscoveredBuses] = useState<RecommendedBus[]>([]);
-  const [isSearchingBuses, setSearchingBuses] = useState<boolean>(false);
-  const [searchError, setSearchError] = useState<string | null>(null);
 
   const socketRef = useRef<Socket | null>(null);
 
-  const fetchTransportData = useCallback(async (lat: number, lng: number) => {
+  const fetchTransportData = useCallback(async (lat: number, lng: number, searchDestination?: string) => {
     setLoading(true);
     setError(null);
     try {
-      const [stops, buses, upTrip, approachingBuses] = await Promise.all([
+      const destTerm = searchDestination !== undefined ? searchDestination.trim() : destination.trim();
+      const [stops, busesList, activeList] = await Promise.all([
         getNearbyStops(lat, lng).catch(() => null),
+        getNearbyBusesForDestination(lat, lng, destTerm || undefined).catch(() => null),
         getActiveBuses().catch(() => null),
-        getUpcomingTrip(lat, lng).catch(() => null),
-        getNearbyBusesForDestination(lat, lng).catch(() => null),
       ]);
 
       if (stops && stops.length > 0) {
         setNearbyStop(stops[0]);
       }
 
-      if (buses && buses.length > 0) {
-        setActiveBuses(buses);
+      if (activeList && activeList.length > 0) {
+        setActiveBuses(activeList);
       }
 
-      if (upTrip) {
-        setUpcomingTrip(upTrip);
-      }
+      
+      const combinedMap = new Map<string, RecommendedBus>();
 
-      // Automatically populate approaching buses on initial load
-      if (approachingBuses && approachingBuses.length > 0) {
-        setDiscoveredBuses(approachingBuses);
-        setSearchedDestination('Approaching Buses');
-      }
-
-      if (!stops && !buses && !upTrip) {
-        setError('Unable to load live transport data.');
-      }
-    } catch {
-      setError('Unable to load live transport data.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const initLocationAndData = useCallback(async () => {
-    let lat = FALLBACK_LAT;
-    let lng = FALLBACK_LNG;
-    let locName = FALLBACK_LOCATION_NAME;
-
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === 'granted') {
-        const position = await Promise.race([
-          Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
-          new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000)),
-        ]);
-
-        if (position && position.coords) {
-          lat = position.coords.latitude;
-          lng = position.coords.longitude;
-
-          try {
-            const reverse = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
-            if (reverse && reverse.length > 0) {
-              const place = reverse[0];
-              locName = place.district || place.subregion || place.city || place.name || FALLBACK_LOCATION_NAME;
-            }
-          } catch {
-            locName = FALLBACK_LOCATION_NAME;
+      if (busesList && Array.isArray(busesList)) {
+        for (const b of busesList) {
+          if (b && (b.id || b.busNumber)) {
+            const key = b.busNumber || b.id;
+            combinedMap.set(key, b);
           }
         }
       }
-    } catch {
-      // Fallback location is safely preserved
-    }
 
-    setLocationName(locName);
-    setCoords({ latitude: lat, longitude: lng });
-    await fetchTransportData(lat, lng);
-  }, [fetchTransportData]);
+      //  Ensure all active buses from the DB exist in the list
+      if (activeList && Array.isArray(activeList)) {
+        for (const act of activeList) {
+          const key = act.busNumber || act.id;
+          if (!combinedMap.has(key)) {
+            // Bus coordinate fallback: Nyabugogo terminal for Bus 303, or default coordinates
+            const busLat =
+              (act as any).location?.latitude ??
+              (act as any).latitude ??
+              (act.busNumber === '303' ? -1.9346 : lat);
+            const busLng =
+              (act as any).location?.longitude ??
+              (act as any).longitude ??
+              (act.busNumber === '303' ? 30.0540 : lng);
+
+            const dist = calcDistanceKm(lat, lng, busLat, busLng);
+            const distMeters = Math.round(dist * 1000);
+            const etaMins = Math.max(1, Math.round((dist / 30) * 60));
+
+            const rName =
+              act.routeName ||
+              (act as any).route?.name ||
+              (act.busNumber === '303'
+                ? 'Route 303 - Nyabugogo Nyacyonga'
+                : `Route ${act.busNumber}`);
+            const rNum = (act as any).routeNumber || act.busNumber || '100';
+
+            combinedMap.set(key, {
+              id: act.id,
+              busNumber: act.busNumber,
+              plateNumber: act.plateNumber || `RAD ${act.busNumber}A`,
+              driverName: (act as any).driverName || 'Tega Driver',
+              routeName: rName,
+              routeNumber: rNum,
+              destination:
+                (act as any).destination ||
+                (act.busNumber === '303' ? 'Nyacyonga' : 'Terminal'),
+              latitude: busLat,
+              longitude: busLng,
+              speed: act.speed ?? 24,
+              heading: (act as any).heading ?? 0,
+              currentStop:
+                (act as any).currentStop ||
+                (act.busNumber === '303' ? 'Nyabugogo Terminal' : 'In transit'),
+              nextStop:
+                (act as any).nextStop ||
+                (act.busNumber === '303' ? 'Gatsata' : 'Approaching'),
+              distanceKm: Math.max(0.1, Math.round(dist * 10) / 10),
+              distanceMeters: distMeters,
+              etaMinutes: etaMins,
+              status: act.status || 'ACTIVE',
+              isApproaching: true,
+              isMoving: (act.speed ?? 24) > 0,
+              motionStatus: (act.speed ?? 24) > 0 ? 'MOVING' : 'PARKED',
+            });
+          }
+        }
+      }
+
+      let allNearby = Array.from(combinedMap.values()).sort(
+        (a, b) => (a.distanceMeters ?? 0) - (b.distanceMeters ?? 0),
+      );
+
+      // If a destination was searched, filter matching buses by destination, route name, or stops
+      if (destTerm) {
+        const lower = destTerm.toLowerCase();
+        allNearby = allNearby.filter((b) => {
+          const rName = (b.routeName || '').toLowerCase();
+          const dName = (b.destination || '').toLowerCase();
+          const rNum = (b.routeNumber || '').toLowerCase();
+          const cStop = (b.currentStop || '').toLowerCase();
+          const nStop = (b.nextStop || '').toLowerCase();
+          return (
+            rName.includes(lower) ||
+            dName.includes(lower) ||
+            rNum.includes(lower) ||
+            cStop.includes(lower) ||
+            nStop.includes(lower)
+          );
+        });
+      }
+
+      setNearbyBuses(allNearby);
+
+      if (!stops && !busesList && !activeList) {
+        setError('Unable to load nearby buses.');
+      }
+    } catch {
+      setError('Unable to load nearby buses.');
+    } finally {
+      setLoading(false);
+    }
+  }, [destination]);
+
+  const handleFindRoute = useCallback(async () => {
+    const term = destination.trim();
+    await fetchTransportData(coords.latitude, coords.longitude, term);
+  }, [destination, coords.latitude, coords.longitude, fetchTransportData]);
+
+  const handleClearDestination = useCallback(async () => {
+    setDestination('');
+    await fetchTransportData(coords.latitude, coords.longitude, '');
+  }, [coords.latitude, coords.longitude, fetchTransportData]);
+
+  const detectGpsLocation = useCallback(
+    async (forceHighAccuracy = false) => {
+      let lat = coords.latitude || FALLBACK_LAT;
+      let lng = coords.longitude || FALLBACK_LNG;
+      let locName = locationName || FALLBACK_LOCATION_NAME;
+
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          
+          
+          
+          // Immediately check last known position (fast, accurate cached fix)
+          if (!forceHighAccuracy) {
+            try {
+              const lastKnown = await Location.getLastKnownPositionAsync();
+              if (lastKnown && lastKnown.coords) {
+                lat = lastKnown.coords.latitude;
+                lng = lastKnown.coords.longitude;
+              }
+            } catch {
+              //
+            }
+          }
+
+          //  Query GPS with reasonable 10s timeout so devices have time to lock
+          try {
+            const positionPromise = Location.getCurrentPositionAsync({
+              accuracy: forceHighAccuracy
+                ? Location.Accuracy.High
+                : Location.Accuracy.Balanced,
+            });
+            const timeoutPromise = new Promise<null>((resolve) =>
+              setTimeout(() => resolve(null), 10000),
+            );
+            const position = await Promise.race([positionPromise, timeoutPromise]);
+
+            if (position && position.coords) {
+              lat = position.coords.latitude;
+              lng = position.coords.longitude;
+            }
+          } catch {
+            // Keep coordinates obtained so far
+          }
+
+          //  Reverse geocode place name
+          try {
+            const reverse = await Location.reverseGeocodeAsync({
+              latitude: lat,
+              longitude: lng,
+            });
+            if (reverse && reverse.length > 0) {
+              const place = reverse[0];
+              locName =
+                place.district ||
+                place.subregion ||
+                place.city ||
+                place.name ||
+                locName;
+            }
+          } catch {
+            // Keep fallback or existing name
+          }
+        }
+      } catch {
+        // Fallback location preserved safely
+      }
+
+      setLocationName(locName);
+      setCoords({ latitude: lat, longitude: lng });
+      await fetchTransportData(lat, lng);
+    },
+    [coords.latitude, coords.longitude, locationName, fetchTransportData],
+  );
+
+  const initLocationAndData = useCallback(async () => {
+    await detectGpsLocation(false);
+  }, [detectGpsLocation]);
+
+  const handleSelectLocation = () => {
+    Alert.alert(
+      'Set Your Location',
+      'Choose your current boarding area or re-detect using GPS:',
+      [
+        {
+          text: ' Re-detect GPS (Accurate)',
+          onPress: () => detectGpsLocation(true),
+        },
+        {
+          text: 'Nyabugogo Terminal',
+          onPress: () => {
+            setLocationName('Nyabugogo Terminal');
+            setCoords({ latitude: -1.9346, longitude: 30.0540 });
+            fetchTransportData(-1.9346, 30.0540);
+          },
+        },
+        {
+          text: ' Downtown (City Center)',
+          onPress: () => {
+            setLocationName('Downtown Terminal');
+            setCoords({ latitude: -1.9441, longitude: 30.0619 });
+            fetchTransportData(-1.9441, 30.0619);
+          },
+        },
+        {
+          text: ' Kimironko Terminal',
+          onPress: () => {
+            setLocationName('Kimironko');
+            setCoords({ latitude: -1.9400, longitude: 30.1200 });
+            fetchTransportData(-1.9400, 30.1200);
+          },
+        },
+        {
+          text: ' Nyacyonga',
+          onPress: () => {
+            setLocationName('Nyacyonga');
+            setCoords({ latitude: -1.8682, longitude: 30.0847 });
+            fetchTransportData(-1.8682, 30.0847);
+          },
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+      ],
+    );
+  };
 
   useEffect(() => {
     initLocationAndData();
   }, [initLocationAndData]);
 
-  // Connect Socket.IO for live bus location updates
+  // Use a ref so the socket handler always reads the latest coords
+ 
+  const coordsRef = useRef(coords);
+  useEffect(() => { coordsRef.current = coords; }, [coords]);
+
+  // Connect Socket.IO for live bus updates (nearby buses and stop movement only).
+ 
   useEffect(() => {
     const socket = io(BACKEND_URL, {
       transports: ['websocket', 'polling'],
@@ -160,8 +323,11 @@ export default function HomeScreen() {
     const handleLocationUpdate = (data: any) => {
       if (!data || !data.busNumber) return;
 
-      // 1. Update Discovered / Approaching Buses
-      setDiscoveredBuses((prevBuses) => {
+      // Read latest coords from ref (avoids stale closure without re-subscribing)
+      const { latitude: userLat, longitude: userLng } = coordsRef.current;
+
+      // 1. Update Nearby Buses
+      setNearbyBuses((prevBuses) => {
         if (!prevBuses || prevBuses.length === 0) return prevBuses;
         const busIndex = prevBuses.findIndex(
           (b) => b.busNumber === data.busNumber || b.id === data.busId,
@@ -175,69 +341,34 @@ export default function HomeScreen() {
           const dist = calcDistanceKm(
             data.latitude,
             data.longitude,
-            coords.latitude,
-            coords.longitude,
+            userLat,
+            userLng,
           );
           updated.distanceKm = Math.max(0.1, Math.round(dist * 10) / 10);
           updated.distanceMeters = Math.round(updated.distanceKm * 1000);
+          // Recalculate ETA from live speed and distance
+          if (data.speed && data.speed > 5) {
+            updated.etaMinutes = Math.max(1, Math.round((updated.distanceKm / data.speed) * 60));
+          }
         }
         if (data.speed !== undefined) {
           updated.speed = Math.round(data.speed);
           updated.isMoving = updated.speed > 2;
           updated.motionStatus = updated.isMoving ? 'MOVING' : 'PARKED';
         }
+        if (data.etaMinutes != null) updated.etaMinutes = data.etaMinutes;
         if (data.currentStop) updated.currentStop = data.currentStop;
         if (data.nextStop) updated.nextStop = data.nextStop;
-
-        const speedForEta = updated.speed > 10 ? updated.speed : 25;
-        updated.etaMinutes =
-          updated.distanceKm <= 0.2
-            ? 1
-            : Math.max(1, Math.round((updated.distanceKm / speedForEta) * 60));
 
         const updatedList = [...prevBuses];
         updatedList[busIndex] = updated;
-        return updatedList.sort((a, b) => a.etaMinutes - b.etaMinutes);
+        return updatedList.sort(
+          (a, b) => (a.distanceMeters ?? 0) - (b.distanceMeters ?? 0),
+        );
       });
 
-      // 2. Real-time update for Upcoming Trip Card (Never Stuck)
-      setUpcomingTrip((prevTrip) => {
-        if (!prevTrip || prevTrip.busNumber !== data.busNumber) return prevTrip;
+      //  Real-time update for Nearby Stop Buses (Moving or Parked)
 
-        const updated = { ...prevTrip };
-        if (data.latitude && data.longitude) {
-          const distKm = calcDistanceKm(
-            data.latitude,
-            data.longitude,
-            coords.latitude,
-            coords.longitude,
-          );
-          updated.distanceMeters = Math.round(distKm * 1000);
-          const spd =
-            data.speed !== undefined && data.speed > 10
-              ? data.speed
-              : prevTrip.speed > 10
-              ? prevTrip.speed
-              : 25;
-          updated.speed = data.speed !== undefined ? Math.round(data.speed) : prevTrip.speed;
-          updated.isMoving = updated.speed > 2;
-
-          if (updated.distanceMeters <= 150) {
-            updated.status = 'Boarding';
-            updated.statusLabel = 'At Stop';
-            updated.etaMinutes = 0;
-          } else {
-            updated.etaMinutes = Math.max(1, Math.round((distKm / spd) * 60));
-            updated.status = 'Arriving';
-            updated.statusLabel = `in ${updated.etaMinutes} mins`;
-          }
-        }
-        if (data.currentStop) updated.currentStop = data.currentStop;
-        if (data.nextStop) updated.nextStop = data.nextStop;
-        return updated;
-      });
-
-      // 3. Real-time update for Nearby Stop Buses (Moving vs Parked)
       setNearbyStop((prevStop) => {
         if (!prevStop) return prevStop;
         let changed = false;
@@ -290,48 +421,10 @@ export default function HomeScreen() {
     return () => {
       socket.disconnect();
     };
-  }, [coords.latitude, coords.longitude]);
+  }, []); 
+  
+  // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Smart Bus Discovery Trigger
-  const handleFindBuses = async () => {
-    if (!destination.trim()) {
-      return;
-    }
-
-    setSearchingBuses(true);
-    setSearchError(null);
-    setSearchedDestination(destination.trim());
-
-    try {
-      const buses = await getNearbyBusesForDestination(
-        coords.latitude,
-        coords.longitude,
-        destination.trim(),
-      );
-      setDiscoveredBuses(buses);
-    } catch {
-      setSearchError('Unable to find buses heading to destination. Please try again.');
-      setDiscoveredBuses([]);
-    } finally {
-      setSearchingBuses(false);
-    }
-  };
-
-  const handleClearSearch = async () => {
-    setDestination('');
-    setSearchError(null);
-    setSearchingBuses(true);
-    try {
-      const buses = await getNearbyBusesForDestination(coords.latitude, coords.longitude);
-      setDiscoveredBuses(buses);
-      setSearchedDestination('Approaching Buses');
-    } catch {
-      setDiscoveredBuses([]);
-      setSearchedDestination(null);
-    } finally {
-      setSearchingBuses(false);
-    }
-  };
 
   const formatDistance = (meters?: number) => {
     if (meters === undefined || meters === null) return '500m';
@@ -350,43 +443,28 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <Header />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-    
+        
         <View style={styles.searchBox}>
           <Text style={styles.title}>Where do you want to go?</Text>
 
-          <TouchableOpacity style={styles.locationBox} activeOpacity={0.7} onPress={initLocationAndData}>
-            <MaterialIcons name="my-location" size={20} color="#64748B" />
-            <Text style={styles.locationText}>{locationName || 'Current Location'}</Text>
+          <TouchableOpacity style={styles.locationBox} activeOpacity={0.7} onPress={handleSelectLocation}>
+            <MaterialIcons name="my-location" size={20} color="#04325E" />
+            <Text style={[styles.locationText, { flex: 1 }]} numberOfLines={1}> {locationName || 'Current Location'} </Text>
+            <Ionicons name="chevron-down" size={16} color="#64748B" />
           </TouchableOpacity>
 
           <View style={styles.locationBox}>
             <Ionicons name="location" size={20} color="#0F172A" />
-            <TextInput
-              style={styles.destinationInput}
-              placeholder="Search destination (e.g. Kimironko)"
-              placeholderTextColor="#94A3B8"
-              value={destination}
-              onChangeText={setDestination}
-              onSubmitEditing={handleFindBuses}
-              returnKeyType="search"
-            />
+            <TextInput style={styles.destinationInput} placeholder="Search destination (e.g. Kimironko)" placeholderTextColor="#94A3B8" value={destination} onChangeText={setDestination} returnKeyType="search" onSubmitEditing={handleFindRoute} />
             {destination.length > 0 ? (
-              <TouchableOpacity onPress={handleClearSearch} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <TouchableOpacity onPress={handleClearDestination} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Ionicons name="close-circle" size={18} color="#94A3B8" />
               </TouchableOpacity>
             ) : null}
           </View>
 
-          <TouchableOpacity
-            style={styles.findButton}
-            activeOpacity={0.85}
-            onPress={handleFindBuses}
-          >
-            {isSearchingBuses ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
-            ) : (
-              <Text style={styles.findButtonText}>FIND ROUTE</Text>
-            )}
+          <TouchableOpacity style={styles.findButton} activeOpacity={0.85} onPress={handleFindRoute}>
+            <Text style={styles.findButtonText}>FIND ROUTE</Text>
           </TouchableOpacity>
         </View>
 
@@ -420,163 +498,144 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {upcomingTrip ? (
-          <>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Upcoming Trip</Text>
-            </View>
+        
+        <View style={styles.nearbyHeader}>
+          <Text style={styles.sectionTitle}>
+            {destination.trim() ? `Buses to "${destination.trim()}"` : 'Buses Near You'}
+          </Text>
+          {destination.trim() ? (
+            <TouchableOpacity onPress={handleClearDestination}>
+              <Text style={styles.viewMap}>Clear search</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity onPress={() => router.push('/(tabs)/explore')}>
+              <Text style={styles.viewMap}>View all</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
-            <View style={styles.tripCard}>
-              <View style={styles.routeBox}>
-                <Text style={styles.routeText}>ROUTE</Text>
-                <Text style={styles.routeNumber}>{upcomingTrip.routeNumber}</Text>
-              </View>
-
-              <View style={styles.tripInfo}>
-                <Text style={styles.destinationText}>{upcomingTrip.destination}</Text>
-                <View style={styles.timeRow}>
-                  <Ionicons name="time-outline" size={15} color="#64748B" />
-                  <Text style={styles.timeText}>{upcomingTrip.time}</Text>
-                </View>
-              </View>
-
-              <View style={styles.arrivalSection}>
-                <View
-                  style={[
-                    styles.arrivingBox,
-                    upcomingTrip.status === 'Boarding' && { backgroundColor: '#DBEAFE', borderColor: '#93C5FD' },
-                    upcomingTrip.status === 'Scheduled' && { backgroundColor: '#F1F5F9', borderColor: '#CBD5E1' },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.arrivingText,
-                      upcomingTrip.status === 'Boarding' && { color: '#04325E' },
-                      upcomingTrip.status === 'Scheduled' && { color: '#475569' },
-                    ]}
-                  >
-                    {upcomingTrip.status}
-                  </Text>
-                </View>
-                <Text style={styles.minutesText}>{upcomingTrip.statusLabel}</Text>
-              </View>
-            </View>
-          </>
-        ) : null}
-
-        {/* Smart Nearby Bus Discovery Results (Approaching Buses) */}
-        {searchedDestination ? (
-          <View style={styles.discoverySection}>
-            <View style={styles.discoveryHeaderRow}>
-              <Text style={styles.sectionTitle}>
-                Buses to {searchedDestination}
+        {loading ? (
+          <View style={styles.searchLoadingBox}>
+            <ActivityIndicator size="small" color="#04325E" />
+            <Text style={styles.searchLoadingText}>
+              {destination.trim()
+                ? `Finding buses to ${destination.trim()}...`
+                : 'Finding buses near you...'}
+            </Text>
+          </View>
+        ) : error && nearbyBuses.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyTitle}>Unable to load buses.</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={handleFindRoute}>
+              <Text style={styles.retryButtonText}>Tap to retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : nearbyBuses.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyTitle}>
+              {destination.trim()
+                ? `No buses found heading to "${destination.trim()}".`
+                : 'No nearby buses available.'}
+            </Text>
+            <Text style={styles.emptySubtitle}>
+              {destination.trim()
+                ? 'Try searching for another destination or view all nearby buses.'
+                : 'Please check back shortly or explore popular routes.'}
+            </Text>
+            <TouchableOpacity style={styles.retryButton} onPress={handleClearDestination}>
+              <Text style={styles.retryButtonText}>
+                {destination.trim() ? 'Show all nearby buses' : 'Tap to retry'}
               </Text>
-              <TouchableOpacity onPress={handleClearSearch}>
-                <Text style={styles.clearSearchText}>Clear</Text>
-              </TouchableOpacity>
-            </View>
-
-            {isSearchingBuses ? (
-              <View style={styles.searchLoadingBox}>
-                <ActivityIndicator size="small" color="#04325E" />
-                <Text style={styles.searchLoadingText}>Finding active buses heading your way...</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          nearbyBuses.map((bus) => (
+            <View key={bus.id || bus.busNumber} style={styles.recommendedBusCard}>
+              
+              <View style={styles.busCardHeader}>
+                <View style={styles.busNumberBadge}>
+                  <Text style={styles.busNumberBadgeText}>BUS {bus.busNumber}</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  {bus.motionStatus === 'PARKED' ? (
+                    <View style={styles.parkedBadge}>
+                      <View style={styles.parkedDot} />
+                      <Text style={styles.parkedText}>PARKED</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.movingBadge}>
+                      <View style={styles.liveDot} />
+                      <Text style={styles.liveText}>MOVING</Text>
+                    </View>
+                  )}
+                </View>
               </View>
-            ) : searchError ? (
-              <View style={styles.emptyCard}>
-                <Text style={styles.emptyTitle}>{searchError}</Text>
-                <TouchableOpacity style={styles.retryButton} onPress={handleFindBuses}>
-                  <Text style={styles.retryButtonText}>Retry</Text>
+
+              <Text style={styles.busRouteTitle}>{bus.routeName}</Text>
+
+            
+              <View style={styles.statsCard}>
+                <View style={styles.statCol}>
+                  <Text style={styles.statValue}>
+                    {bus.distanceKm < 1 ? `${bus.distanceMeters} m` : `${bus.distanceKm} km`}
+                  </Text>
+                  <Text style={styles.statLabel}>DISTANCE</Text>
+                </View>
+                <View style={styles.statCol}>
+                  <Text style={styles.statValue}>
+                    {bus.speed > 0 ? `${bus.speed} km/h` : '0 km/h'}
+                  </Text>
+                  <Text style={styles.statLabel}>SPEED</Text>
+                </View>
+              </View>
+
+            
+              <View style={styles.busCardBottomRow}>
+                <View style={styles.stopInfoCol}>
+                  <View style={styles.stopInfoRow}>
+                    <Ionicons name="radio-button-on" size={14} color="#04325E" />
+                    <Text style={styles.stopInfoText} numberOfLines={1}>
+                      <Text style={styles.stopLabel}>Current stop: </Text>
+                      <Text style={styles.stopValue}>{bus.currentStop || 'In transit'}</Text>
+                    </Text>
+                  </View>
+                  <View style={styles.stopInfoRow}>
+                    <Ionicons name="arrow-forward-circle-outline" size={14} color="#64748B" />
+                    <Text style={styles.stopInfoText} numberOfLines={1}>
+                      <Text style={styles.stopLabel}>Next stop: </Text>
+                      <Text style={styles.stopValue}>{bus.nextStop || 'Approaching'}</Text>
+                    </Text>
+                  </View>
+                </View>
+
+                <TouchableOpacity style={styles.viewRouteBtn} activeOpacity={0.7} onPress={() =>
+                  router.push({
+                    pathname: '/map',
+                    params: {
+                      busId: bus.id,
+                      busNumber: bus.busNumber,
+                      routeName: bus.routeName,
+                      routeNumber: bus.routeNumber,
+                      currentStop: bus.currentStop,
+                      nextStop: bus.nextStop,
+                      speed: (bus.speed ?? 0).toString(),
+                      motionStatus: bus.motionStatus || (bus.isMoving ? 'MOVING' : 'PARKED'),
+                      distanceKm: (bus.distanceKm ?? 1.2).toString(),
+                      etaMinutes: (bus.etaMinutes ?? 3).toString(),
+                      userLat: coords.latitude.toString(),
+                      userLng: coords.longitude.toString(),
+                    },
+                  })
+                  }
+                >
+                  <Text style={styles.viewRouteBtnText}>VIEW ROUTE </Text>
+                  <Ionicons name="chevron-forward" size={12} color="#04325E" />
                 </TouchableOpacity>
               </View>
-            ) : discoveredBuses.length > 0 ? (
-              discoveredBuses.map((bus) => (
-                <View key={bus.id || bus.busNumber} style={styles.recommendedBusCard}>
-                  {/* Card Header: Bus Badge & Motion indicator & Live indicator */}
-                  <View style={styles.busCardHeader}>
-                    <View style={styles.busNumberBadge}>
-                      <Text style={styles.busNumberBadgeText}>BUS {bus.busNumber}</Text>
-                    </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      {bus.motionStatus === 'PARKED' ? (
-                        <View style={styles.parkedBadge}>
-                          <View style={styles.parkedDot} />
-                          <Text style={styles.parkedText}>PARKED</Text>
-                        </View>
-                      ) : (
-                        <View style={styles.movingBadge}>
-                          <View style={styles.liveDot} />
-                          <Text style={styles.liveText}>MOVING</Text>
-                        </View>
-                      )}
-                      <View style={styles.liveBadge}>
-                        <View style={styles.liveDot} />
-                        <Text style={styles.liveText}>LIVE</Text>
-                      </View>
-                    </View>
-                  </View>
+            </View>
+          ))
+        )}
 
-                  <Text style={styles.busRouteTitle}>{bus.routeName}</Text>
-
-                  {/* 3-Column Stats: ETA, Distance, Speed */}
-                  <View style={styles.statsCard}>
-                    <View style={styles.statCol}>
-                      <Text style={styles.statValue}>{bus.etaMinutes} min</Text>
-                      <Text style={styles.statLabel}>ETA TO YOU</Text>
-                    </View>
-                    <View style={styles.statDivider} />
-                    <View style={styles.statCol}>
-                      <Text style={styles.statValue}>
-                        {bus.distanceKm < 1 ? `${bus.distanceMeters} m` : `${bus.distanceKm} km`}
-                      </Text>
-                      <Text style={styles.statLabel}>DISTANCE</Text>
-                    </View>
-                    <View style={styles.statDivider} />
-                    <View style={styles.statCol}>
-                      <Text style={styles.statValue}>{bus.speed} km/h</Text>
-                      <Text style={styles.statLabel}>SPEED</Text>
-                    </View>
-                  </View>
-
-                  {/* Current & Next Stop */}
-                  <View style={styles.stopProgressBox}>
-                    <View style={styles.stopProgressRow}>
-                      <Ionicons name="radio-button-on" size={14} color="#04325E" />
-                      <Text style={styles.stopProgressLabel}>Current stop: </Text>
-                      <Text style={styles.stopProgressValue}>{bus.currentStop}</Text>
-                    </View>
-                    <View style={styles.stopProgressRow}>
-                      <Ionicons name="arrow-forward-circle-outline" size={14} color="#64748B" />
-                      <Text style={styles.stopProgressLabel}>Next stop: </Text>
-                      <Text style={styles.stopProgressValue}>{bus.nextStop}</Text>
-                    </View>
-                  </View>
-
-                  {/* Driver & Plate Number Footer */}
-                  <View style={styles.busCardFooter}>
-                    <View style={styles.footerItem}>
-                      <Ionicons name="person-outline" size={13} color="#64748B" />
-                      <Text style={styles.footerText}>Driver: {bus.driverName}</Text>
-                    </View>
-                    <View style={styles.footerItem}>
-                      <Ionicons name="car-outline" size={13} color="#64748B" />
-                      <Text style={styles.footerText}>Plate: {bus.plateNumber}</Text>
-                    </View>
-                  </View>
-                </View>
-              ))
-            ) : (
-              <View style={styles.emptyCard}>
-                <Ionicons name="bus-outline" size={32} color="#94A3B8" style={{ marginBottom: 8 }} />
-                <Text style={styles.emptyTitle}>
-                  No buses heading to {searchedDestination} nearby.
-                </Text>
-                <Text style={styles.emptySubtitle}>
-                  Try another destination or check again in a few moments.
-                </Text>
-              </View>
-            )}
-          </View>
-        ) : null}
 
         <View style={styles.nearbyHeader}>
           <Text style={styles.sectionTitle}>Nearby Stop</Text>
@@ -608,7 +667,7 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          {/* Direction-specific bus lists with clear Moving vs Parked status */}
+         
           {nearbyStop?.directions && nearbyStop.directions.length > 0 ? (
             <View style={{ marginTop: 14 }}>
               {nearbyStop.directions.map((dirGroup) => (
@@ -622,21 +681,17 @@ export default function HomeScreen() {
                         <View style={styles.busNumber}>
                           <Text style={styles.busText}>{b.busNumber}</Text>
                         </View>
-                        <View
-                          style={[
-                            styles.motionStatusPill,
+                        <View style={[ styles.motionStatusPill,
                             b.isMoving ? styles.motionMovingPill : styles.motionParkedPill,
                           ]}
                         >
                           <View
-                            style={[
-                              styles.motionDot,
+                            style={[ styles.motionDot,
                               b.isMoving ? styles.movingDotColor : styles.parkedDotColor,
                             ]}
                           />
                           <Text
-                            style={[
-                              styles.motionStatusText,
+                            style={[ styles.motionStatusText,
                               b.isMoving ? styles.movingTextColor : styles.parkedTextColor,
                             ]}
                           >
@@ -658,21 +713,17 @@ export default function HomeScreen() {
                     <View style={styles.busNumber}>
                       <Text style={styles.busText}>{b.busNumber}</Text>
                     </View>
-                    <View
-                      style={[
-                        styles.motionStatusPill,
+                    <View style={[styles.motionStatusPill,
                         b.isMoving ? styles.motionMovingPill : styles.motionParkedPill,
                       ]}
                     >
                       <View
-                        style={[
-                          styles.motionDot,
+                        style={[ styles.motionDot,
                           b.isMoving ? styles.movingDotColor : styles.parkedDotColor,
                         ]}
                       />
                       <Text
-                        style={[
-                          styles.motionStatusText,
+                        style={[styles.motionStatusText,
                           b.isMoving ? styles.movingTextColor : styles.parkedTextColor,
                         ]}
                       >
@@ -842,84 +893,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#0F172A',
   },
-  tripCard: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  routeBox: {
-    width: 52,
-    height: 52,
-    backgroundColor: '#04325E',
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  routeText: {
-    color: '#93C5FD',
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  routeNumber: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  tripInfo: {
-    flex: 1,
-    marginLeft: 14,
-  },
-  destinationText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 4,
-  },
-  timeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  timeText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#64748B',
-  },
-  arrivalSection: {
-    alignItems: 'flex-end',
-  },
-  arrivingBox: {
-    backgroundColor: '#DCFCE7',
-    borderWidth: 1,
-    borderColor: '#86EFAC',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  arrivingText: {
-    color: '#15803D',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  minutesText: {
-    marginTop: 4,
-    fontSize: 11,
-    fontWeight: '500',
-    color: '#64748B',
-  },
-
-  
   nearbyHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1003,20 +976,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     paddingVertical: 0,
   },
-  discoverySection: {
-    marginBottom: 20,
-  },
-  discoveryHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  clearSearchText: {
-    fontSize: 13,
-    color: '#64748B',
-    fontWeight: '600',
-  },
   searchLoadingBox: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
@@ -1065,17 +1024,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.5,
   },
-  liveBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#DCFCE7',
-    borderWidth: 1,
-    borderColor: '#86EFAC',
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 12,
-  },
   liveDot: {
     width: 7,
     height: 7,
@@ -1122,51 +1070,50 @@ const styles = StyleSheet.create({
     color: '#64748B',
     letterSpacing: 0.4,
   },
-  statDivider: {
-    width: 1,
-    height: 26,
-    backgroundColor: '#E2E8F0',
-  },
-  stopProgressBox: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 12,
+  busCardBottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
     gap: 8,
   },
-  stopProgressRow: {
+  stopInfoCol: {
+    flex: 1,
+    gap: 6,
+  },
+  stopInfoRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
-  stopProgressLabel: {
+  stopInfoText: {
+    flexShrink: 1,
+  },
+  stopLabel: {
     fontSize: 12,
     color: '#64748B',
     fontWeight: '500',
   },
-  stopProgressValue: {
+  stopValue: {
     fontSize: 12,
     color: '#0F172A',
     fontWeight: '700',
-    flexShrink: 1,
   },
-  busCardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-  },
-  footerItem: {
+  viewRouteBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 2,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#04325E',
+    backgroundColor: '#FFFFFF',
   },
-  footerText: {
-    fontSize: 12,
-    color: '#64748B',
-    fontWeight: '500',
+  viewRouteBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#04325E',
+    letterSpacing: 0.4,
   },
   emptyCard: {
     backgroundColor: '#FFFFFF',

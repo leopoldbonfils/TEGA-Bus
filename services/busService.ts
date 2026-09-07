@@ -238,6 +238,17 @@ export const getNearbyBusesForDestination = async (
 };
 
 /**
+ * Fetch buses currently near the passenger's location.
+ */
+export const getNearbyBuses = async (
+  latitude: number,
+  longitude: number,
+): Promise<RecommendedBus[]> => {
+  return getNearbyBusesForDestination(latitude, longitude);
+};
+
+
+/**
  * Fetch dynamic upcoming trip for the passenger's current location from real database data.
  */
 export const getUpcomingTrip = async (
