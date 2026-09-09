@@ -1,81 +1,141 @@
-import React from 'react';
-import {StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView,} from 'react-native';
-import { Ionicons, FontAwesome, FontAwesome6, AntDesign, MaterialIcons, MaterialCommunityIcons,} from '@expo/vector-icons';
+import React, { useState, useEffect, useCallback } from 'react';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView, ActivityIndicator,RefreshControl,} from 'react-native';
+import {Ionicons,FontAwesome,FontAwesome6,AntDesign,MaterialIcons,MaterialCommunityIcons,} from '@expo/vector-icons';
 import { router } from 'expo-router';
 import Header from '../components/Header';
+import { getAllRoutes, BusRoute, getNearbyStops, NearbyStop } from '../services/routeService';
 
 export default function ExploreScreen() {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [routes, setRoutes] = useState<BusRoute[]>([]);
+  const [nearbyStops, setNearbyStops] = useState<NearbyStop[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
+
+  const loadData = useCallback(async () => {
+    try {
+      const [allRoutes, stops] = await Promise.all([
+        getAllRoutes().catch(() => []),
+        getNearbyStops(-1.9441, 30.0619).catch(() => []),
+      ]);
+      setRoutes(allRoutes);
+      setNearbyStops(stops);
+    } catch {
+      
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadData();
+  }, [loadData]);
+
+  const filteredRoutes = routes.filter((r) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    return (
+      r.name?.toLowerCase().includes(q) ||
+      r.startLocation?.toLowerCase().includes(q) ||
+      r.destination?.toLowerCase().includes(q) ||
+      r.stops?.some((s) => s.name?.toLowerCase().includes(q))
+    );
+  });
+
   return (
     <View style={styles.container}>
       <Header />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        
+      <ScrollView showsVerticalScrollIndicator={false}contentContainerStyle={styles.scrollContent}refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0A3866" />}>
         <View style={styles.searchField}>
           <View style={styles.searchIcon}>
             <Ionicons name="search-outline" size={20} color="#64748B" />
           </View>
           <View style={styles.textInput}>
-            <TextInput placeholder="Where to?" placeholderTextColor="#94A3B8" style={styles.searchInput} />
+            <TextInput placeholder="Where to?" placeholderTextColor="#94A3B8"style={styles.searchInput}value={searchQuery}onChangeText={setSearchQuery}returnKeyType="search"/>
           </View>
-          <TouchableOpacity style={styles.filterIcon}>
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')} style={{ padding: 4, marginRight: 2 }}>
+              <Ionicons name="close-circle" size={18} color="#94A3B8" />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={styles.filterIcon} onPress={() => {}}>
             <Ionicons name="options-outline" size={20} color="#0A3866" />
           </TouchableOpacity>
         </View>
+
         <View style={styles.chipsRow}>
-          <TouchableOpacity style={styles.chip}>
-            <Ionicons name="home" size={15} color="#0A3866" />
-            <Text style={styles.chipText}>Home</Text>
+          <TouchableOpacity style={[styles.chip, searchQuery.toLowerCase() === 'home' && { backgroundColor: '#0A3866' }]}onPress={() => setSearchQuery(searchQuery.toLowerCase() === 'home' ? '' : 'Home')}>
+            <Ionicons name="home"size={15} color={searchQuery.toLowerCase() === 'home' ? '#FFFFFF' : '#0A3866'}/>
+            <Text style={[ styles.chipText, searchQuery.toLowerCase() === 'home' && { color: '#FFFFFF' },]}>Home</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.chip}>
-            <Ionicons name="briefcase" size={15} color="#0A3866" />
-            <Text style={styles.chipText}>Work</Text>
+          <TouchableOpacity style={[styles.chip, searchQuery.toLowerCase() === 'work' && { backgroundColor: '#0A3866' }]}onPress={() => setSearchQuery(searchQuery.toLowerCase() === 'work' ? '' : 'Work')}>
+            <Ionicons name="briefcase"size={15} color={searchQuery.toLowerCase() === 'work' ? '#FFFFFF' : '#0A3866'}/>
+            <Text style={[ styles.chipText, searchQuery.toLowerCase() === 'work' && { color: '#FFFFFF' },]}>Work</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.chip, styles.chipDashed]}>
+          <TouchableOpacity style={[styles.chip, styles.chipDashed]}onPress={() => router.push('/saved-locations')}>
             <Ionicons name="add" size={16} color="#64748B" />
             <Text style={styles.chipDashedText}>Add Saved</Text>
           </TouchableOpacity>
         </View>
+
         <View style={styles.sectionContainer}>
           <View style={styles.textWords}>
             <Text style={styles.NearTitle}>Nearby Bus Stops</Text>
             <TouchableOpacity onPress={() => router.push('/map')}>
-              <Text style={styles.viewMap}>View Map</Text>
+              <Text style={styles.viewMap}>View All</Text>
             </TouchableOpacity>
           </View>
-
-          <View style={styles.cardBus}>
-            <TouchableOpacity activeOpacity={0.8} style={styles.firstCard}>
-              <View style={styles.busIconContainer}>
-                <FontAwesome name="bus" size={18} color="#FFFFFF" />
-              </View>
-              <View style={styles.PlaceName}>
-                <Text style={styles.LocationName}>Kimironko Terminus</Text>
-                <View style={styles.walkRow}>
-                  <FontAwesome6 name="person-walking" size={14} color="#64748B" />
-                  <Text style={styles.minuteLeft}>5 min away</Text>
-                </View>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-            </TouchableOpacity>
-
-            <TouchableOpacity activeOpacity={0.8} style={styles.firstCard}>
-              <View style={[styles.busIconContainer, styles.busIconLight]}>
-                <FontAwesome name="bus" size={18} color="#0A3866" />
-              </View>
-              <View style={styles.PlaceName}>
-                <Text style={styles.LocationName}>Remera Park</Text>
-                <View style={styles.walkRow}>
-                  <FontAwesome6 name="person-walking" size={14} color="#64748B" />
-                  <Text style={styles.minuteLeft}>12 min away</Text>
-                </View>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-            </TouchableOpacity>
-          </View>
+          {nearbyStops.length > 0 && (
+            <View style={styles.cardBus}>
+              {nearbyStops.slice(0, 2).map((stop, index) => (
+                <TouchableOpacity
+                  key={stop.id || index}
+                  style={styles.firstCard}
+                  activeOpacity={0.8}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/map',
+                      params: { stopName: stop.name, stopId: stop.id },
+                    })
+                  }
+                >
+                  <View
+                    style={[
+                      styles.busIconContainer,
+                      index % 2 === 1 ? styles.busIconLight : null,
+                    ]}
+                  >
+                    <Ionicons
+                      name="bus"
+                      size={20}
+                      color={index % 2 === 1 ? '#0A3866' : '#FFFFFF'}
+                    />
+                  </View>
+                  <View style={styles.PlaceName}>
+                    <Text style={styles.LocationName}>{stop.name}</Text>
+                    <View style={styles.walkRow}>
+                      <Ionicons name="walk-outline" size={14} color="#64748B" />
+                      <Text style={styles.minuteLeft}>
+                        {stop.distanceMeters
+                          ? `${Math.max(1, Math.round(stop.distanceMeters / 80))} min walk (${stop.distanceMeters}m)`
+                          : '3 min walk'}
+                      </Text>
+                    </View>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
-
 
         <View style={styles.sectionContainer}>
           <View style={styles.PopularText}>
@@ -83,93 +143,102 @@ export default function ExploreScreen() {
           </View>
 
           <View style={styles.routerDetails}>
-            <View style={styles.busDetails}>
-              <View style={styles.busTopRow}>
-                <View style={styles.plateContainer}>
-                  <Text style={styles.plateNumber}>101</Text>
-                </View>
-
-                <View style={styles.routeInfo}>
-                  <Text style={styles.routeTitle}> Kigali <Text style={styles.arrow}>➔</Text>
-                  </Text>
-                  <Text style={styles.routeDestination}>Nyabugogo</Text>
-                  <View style={styles.clockName}>
-                    <AntDesign name="clock-circle" size={12} color="#10B981" />
-                    <Text style={styles.frequencyText}>Every 15 mins</Text>
-                  </View>
-                </View>
-
-                <View style={styles.rwf}>
-                  <Text style={styles.sizeRwf}>RWF</Text>
-                  <Text style={styles.fareAmount}>500</Text>
-                  <Text style={styles.BaseFare}>Base Fare</Text>
-                </View>
+            {loading ? (
+              <View style={{ paddingVertical: 24, alignItems: 'center' }}>
+                <ActivityIndicator size="small" color="#0A3866" />
               </View>
-
-              <View style={styles.busBottomRow}>
-                <View style={styles.statsRow}>
-                  <View style={styles.statItem}>
-                    <MaterialIcons name="route" size={16} color="#475569" />
-                    <Text style={styles.routerStop}>8 Stops</Text>
-                  </View>
-                  <View style={styles.TimeClock}>
-                    <MaterialCommunityIcons name="clock-outline" size={16} color="#475569" />
-                    <Text style={styles.timeText}>Est. 25 min</Text>
-                  </View>
-                </View>
-
-                <TouchableOpacity style={styles.viewRouter}>
-                  <Text style={styles.routeLocation}>View Route</Text>
-                </TouchableOpacity>
+            ) : filteredRoutes.length === 0 ? (
+              <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+                <Text style={{ color: '#64748B', fontSize: 14 }}>
+                  No routes found for "{searchQuery}"
+                </Text>
               </View>
-            </View>
+            ) : (
+              filteredRoutes.map((route, index) => {
+                const routeNum = route.name.match(/\d+/)?.[0] || `${101 + index}`;
+                const start = route.startLocation || 'Downtown';
+                const dest = route.destination || 'Nyabugogo';
+                const stopsCount = route.stops?.length || 8;
+                const duration = route.estimatedDuration || 25;
+                const fare = route.fare || 500;
+                const isOutline = index % 2 === 1;
 
-            <View style={styles.busDetails}>
-              <View style={styles.busTopRow}>
-                <View style={styles.plateContainer}>
-                  <Text style={styles.plateNumber}>102</Text>
-                </View>
+                return (
+                  <View key={route.id || index} style={styles.busDetails}>
+                    <View style={styles.busTopRow}>
+                      <View style={styles.plateContainer}>
+                        <Text style={styles.plateNumber}>{routeNum}</Text>
+                      </View>
 
-                <View style={styles.routeInfo}>
-                  <Text style={styles.routeTitle}>Downtown <Text style={styles.arrow}>➔</Text></Text>
-                  <Text style={styles.routeDestination}>Kicukiro</Text>
-                  <View style={styles.clockName}>
-                    <AntDesign name="clock-circle" size={12} color="#10B981" />
-                    <Text style={styles.frequencyText}>Every 20 mins</Text>
+                      <View style={styles.routeInfo}>
+                        <Text style={styles.routeTitle}>
+                          {start} <Text style={styles.arrow}>➔</Text>
+                        </Text>
+                        <Text style={styles.routeDestination}>{dest}</Text>
+                        <View style={styles.clockName}>
+                          <AntDesign name="clock-circle" size={12} color="#10B981" />
+                          <Text style={styles.frequencyText}>Every 15 mins</Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.rwf}>
+                        <Text style={styles.sizeRwf}>RWF</Text>
+                        <Text style={styles.fareAmount}>{fare}</Text>
+                        <Text style={styles.BaseFare}>Base Fare</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.busBottomRow}>
+                      <View style={styles.statsRow}>
+                        <View style={styles.statItem}>
+                          <MaterialIcons name="route" size={16} color="#475569" />
+                          <Text style={styles.routerStop}>{stopsCount} Stops</Text>
+                        </View>
+                        <View style={styles.TimeClock}>
+                          <MaterialCommunityIcons
+                            name="clock-outline"
+                            size={16}
+                            color="#475569"
+                          />
+                          <Text style={styles.timeText}>Est. {duration} min</Text>
+                        </View>
+                      </View>
+
+                      <TouchableOpacity style={[styles.viewRouter, isOutline && styles.viewRouterOutline]} activeOpacity={0.7} onPress={() => router.push({
+                            pathname: '/map',
+                            params: {
+                              routeNumber: routeNum,
+                              routeName: route.name,
+                              routeId: route.id,
+                              startLocation: start,
+                              destination: dest,
+                              fare: fare.toString(),
+                              duration: duration.toString(),
+                            },
+                          })
+                        }
+                      >
+                        <Text
+                          style={[
+                            styles.routeLocation,
+                            isOutline && styles.routeLocationOutline,
+                          ]}
+                        >
+                          View Route
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                </View>
-
-                <View style={styles.rwf}>
-                  <Text style={styles.sizeRwf}>RWF</Text>
-                  <Text style={styles.fareAmount}>500</Text>
-                  <Text style={styles.BaseFare}>Base Fare</Text>
-                </View>
-              </View>
-
-              <View style={styles.busBottomRow}>
-                <View style={styles.statsRow}>
-                  <View style={styles.statItem}>
-                    <MaterialIcons name="route" size={16} color="#475569" />
-                    <Text style={styles.routerStop}>12 Stops</Text>
-                  </View>
-                  <View style={styles.TimeClock}>
-                    <MaterialCommunityIcons name="clock-outline" size={16} color="#475569" />
-                    <Text style={styles.timeText}>Est. 40 min</Text>
-                  </View>
-                </View>
-
-                <TouchableOpacity style={[styles.viewRouter, styles.viewRouterOutline]}>
-                  <Text style={[styles.routeLocation, styles.routeLocationOutline]}>View Route</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
+                );
+              })
+            )}
           </View>
         </View>
       </ScrollView>
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
