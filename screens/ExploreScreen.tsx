@@ -107,17 +107,8 @@ export default function ExploreScreen() {
                     })
                   }
                 >
-                  <View
-                    style={[
-                      styles.busIconContainer,
-                      index % 2 === 1 ? styles.busIconLight : null,
-                    ]}
-                  >
-                    <Ionicons
-                      name="bus"
-                      size={20}
-                      color={index % 2 === 1 ? '#0A3866' : '#FFFFFF'}
-                    />
+                  <View style={[ styles.busIconContainer,index % 2 === 1 ? styles.busIconLight : null,]} >
+                    <Ionicons name="bus" size={20} color={index % 2 === 1 ? '#0A3866' : '#FFFFFF'}/>
                   </View>
                   <View style={styles.PlaceName}>
                     <Text style={styles.LocationName}>{stop.name}</Text>
