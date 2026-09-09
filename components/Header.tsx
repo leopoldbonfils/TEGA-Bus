@@ -39,45 +39,31 @@ export default function Header({
 
   return (
     <View style={[styles.headerContainer, { paddingTop: topPadding + 10 }]}>
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor="#04325E"
-        translucent
-      />
+      <StatusBar barStyle="light-content" backgroundColor="#04325E" translucent />
 
-      {/* Left Back Button */}
-      <View style={styles.leftContainer}>
+      
+      {/* <View style={styles.leftContainer}>
         {showBack ? (
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={handleBack}
-            activeOpacity={0.7}
-          >
+          <TouchableOpacity style={styles.backButton} onPress={handleBack} activeOpacity={0.7}>
             <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
           </TouchableOpacity>
         ) : (
           <View style={styles.sidePlaceholder} />
         )}
-      </View>
+      </View> */}
 
-      {/* Centered Title */}
+  
       <View style={styles.centerContainer}>
         <Text style={styles.title} numberOfLines={1}>
           {title}
         </Text>
       </View>
 
-      {/* Right Avatar */}
+    
       <View style={styles.rightContainer}>
         {showAvatar ? (
-          <TouchableOpacity
-            onPress={() => router.push('/(tabs)/profile')}
-            activeOpacity={0.8}
-          >
-            <Image
-              source={require('../assets/BusImage/profile.png')}
-              style={styles.avatar}
-            />
+          <TouchableOpacity onPress={() => router.push('/(tabs)/profile')} activeOpacity={0.8}>
+            <Image source={require('../assets/BusImage/profile.png')} style={styles.avatar}/>
           </TouchableOpacity>
         ) : (
           <View style={styles.sidePlaceholder} />
