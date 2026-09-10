@@ -1,6 +1,7 @@
 import Headers from '@/components/Header';
 import { useAuth } from '@/context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Toast from 'react-native-toast-message';
@@ -45,7 +46,35 @@ function ProfileRow({
 }
 
 export default function ProfileScreen() {
-  const { user, logout } = useAuth();
+  const { user, updateUser, logout } = useAuth();
+
+  const handleChangePhoto = () => {
+    Alert.alert('Profile photo', 'Choose how you want to update your photo.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Remove photo', style: 'destructive', onPress: () => updateUser({ avatarUri: null }) },
+      { text: 'Choose from library', onPress: pickPhoto },
+    ]);
+  };
+
+  const pickPhoto = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permission required', 'Allow photo access to choose a profile picture.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      updateUser({ avatarUri: result.assets[0].uri });
+      Toast.show({ type: 'success', text1: 'Profile photo updated' });
+    }
+  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -79,8 +108,14 @@ export default function ProfileScreen() {
         {/* Avatar + name */}
         <View style={styles.profileInfo}>
           <View style={styles.avatarWrap}>
-            <Image source={require('../assets/BusImage/profile.png')} style={styles.avatar} />
-            <TouchableOpacity style={styles.editBadge}>
+            {user?.avatarUri ? (
+              <Image source={{ uri: user.avatarUri }} style={styles.avatar} />
+            ) : (
+              <View style={[styles.avatar, styles.avatarPlaceholder]}>
+                <Ionicons name="person" size={42} color="#94A3B8" />
+              </View>
+            )}
+            <TouchableOpacity style={styles.editBadge} onPress={handleChangePhoto}>
               <Ionicons name="pencil" size={12} color="#fff" />
             </TouchableOpacity>
           </View>
@@ -96,10 +131,16 @@ export default function ProfileScreen() {
               icon={item.icon}
               label={item.label}
               onPress={
-                item.label === 'Saved Locations'
+                  item.label === 'Personal Info'
+                  ? () => router.push('/personal-info')
+                  : item.label === 'Saved Locations'
                   ? () => router.push('/saved-locations')
                   : item.label === 'Payment Methods'
                     ? () => router.push('/payment')
+                    : item.label === 'Favorite Routes'
+                      ? () => router.push('/(tabs)/explore')
+                      : item.label === 'Trip History'
+                        ? () => router.push('/(tabs)/trips')
                     : undefined
               }
             />
@@ -159,6 +200,11 @@ const styles = StyleSheet.create({
     width: 90,
     height: 90,
     borderRadius: 45,
+  },
+  avatarPlaceholder: {
+    backgroundColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   editBadge: {
     position: 'absolute',

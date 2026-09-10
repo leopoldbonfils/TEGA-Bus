@@ -44,8 +44,6 @@ export default function NotificationsScreen() {
             </Text>
 
           </View>
-
-
           <Text style={styles.alertDescription}>
             You are approaching your destination.{'\n'}
             Prepare to disembark.
@@ -79,27 +77,18 @@ export default function NotificationsScreen() {
             <Text style={styles.serviceTime}>1 hr ago</Text>
 
           </View>
-
-
           <Text style={styles.alertDescription}>
             Route 101 has a delay due to traffic in{'\n'}
             the downtown area. Expected delay:{'\n'}
             15 mins.
           </Text>
+          </View>
+          </View>
 
-        </View>
-
-      </View>
-
-      <Text style={styles.sectionTitle}>
-        Earlier
-      </Text>
+      <Text style={styles.sectionTitle}> Earlier</Text>
       <View style={styles.alertCard}>
-
-        <View style={styles.successCircle}>
-          <Ionicons
-            name="checkmark-circle-outline"
-            size={32}
+      <View style={styles.successCircle}>
+      <Ionicons name="checkmark-circle-outline"size={32}
             color="#287A5A"
           />
         </View>
@@ -124,12 +113,8 @@ export default function NotificationsScreen() {
             Your trip has been completed. Please{'\n'}
             take a moment to rate your driver.
           </Text>
-
-
           <TouchableOpacity style={styles.rateButton}>
-            <Text style={styles.rateText}>
-              Rate Trip
-            </Text>
+            <Text style={styles.rateText}> Rate Trip</Text>
           </TouchableOpacity>
 
         </View>

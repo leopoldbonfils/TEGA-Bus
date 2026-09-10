@@ -1,11 +1,16 @@
-import { View, Text, StyleSheet, Image, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { Checkbox } from 'expo-checkbox';
-import React, { useState } from 'react';
-import { router } from 'expo-router';
-import { Ionicons, FontAwesome } from '@expo/vector-icons';
-import { loginUser } from '@/services/authService';
-import Toast from 'react-native-toast-message';
 import { useAuth } from '@/context/AuthContext';
+import { loginUser } from '@/services/authService';
+import { FontAwesome, Ionicons } from '@expo/vector-icons';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Google from 'expo-auth-session/providers/google';
+import { Checkbox } from 'expo-checkbox';
+import { router } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import Toast from 'react-native-toast-message';
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const { login } = useAuth();
@@ -14,6 +19,83 @@ export default function LoginScreen() {
   const [isChecked, setIsChecked] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetVisible, setResetVisible] = useState(false);
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    webClientId: '1088153516882-jub92ho1phia1ombjlpio105hoda5fou.apps.googleusercontent.com',
+    androidClientId: '1088153516882-h79vhjmlrd87enpbg0kbkvvi2tcv2dr4.apps.googleusercontent.com',
+  });
+
+  useEffect(() => {
+    if (response?.type === 'success' && response.authentication?.accessToken) {
+      fetchGoogleUser(response.authentication.accessToken);
+    }
+  }, [response]);
+
+  const fetchGoogleUser = async (accessToken: string) => {
+    try {
+      const result = await fetch('https://www.googleapis.com/userinfo/v2/me', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const profile = await result.json();
+      login(
+        {
+          id: profile.id,
+          name: profile.name || profile.email,
+          email: profile.email,
+          role: 'passenger',
+          avatarUri: profile.picture || null,
+        },
+        accessToken
+      );
+      router.replace('/(tabs)');
+    } catch (error: any) {
+      Toast.show({ type: 'error', text1: 'Google Sign-In failed', text2: error.message });
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    try {
+      if (!(await AppleAuthentication.isAvailableAsync())) {
+        Alert.alert('Not available', 'Apple Sign-In is only available on supported Apple devices.');
+        return;
+      }
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+      const name = [credential.fullName?.givenName, credential.fullName?.familyName]
+        .filter(Boolean)
+        .join(' ') || 'Apple User';
+      login(
+        {
+          id: credential.user,
+          name,
+          email: credential.email || 'Apple account',
+          role: 'passenger',
+        },
+        credential.identityToken || credential.user
+      );
+      router.replace('/(tabs)');
+    } catch (error: any) {
+      if (error.code !== 'ERR_REQUEST_CANCELED') {
+        Toast.show({ type: 'error', text1: 'Apple Sign-In failed', text2: error.message });
+      }
+    }
+  };
+
+  const handleForgotPassword = () => {
+    const normalizedEmail = resetEmail.trim().toLowerCase();
+    if (!/^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/.test(normalizedEmail)) {
+      Toast.show({ type: 'error', text1: 'Enter a valid email address' });
+      return;
+    }
+    setResetVisible(false);
+    setResetEmail('');
+    Alert.alert('Reset link requested', `If an account exists for ${normalizedEmail}, reset instructions will be sent there.`);
+  };
 
   const handleLogin = async () => {
     if (!email.trim()) {
@@ -106,7 +188,7 @@ export default function LoginScreen() {
             <Checkbox style={styles.checkbox} value={isChecked} onValueChange={setIsChecked} color={isChecked ? '#007AFF' : undefined}/>
             <Text style={styles.rememberText}>Remember me</Text>
           </View>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => setResetVisible(true)}>
             <Text style={styles.forgotText}>Forgot Password?</Text>
           </TouchableOpacity>
         </View>
@@ -127,11 +209,11 @@ export default function LoginScreen() {
       </View>
 
       <View style={styles.socialRow}>
-        <TouchableOpacity style={styles.socialBtn}>
+        <TouchableOpacity style={styles.socialBtn} disabled={!request} onPress={() => promptAsync()}>
           <Image source={require('../assets/BusImage/google.png')} style={styles.googleImage}/>
           <Text style={styles.socialText}>Google</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.socialBtn}>
+        <TouchableOpacity style={styles.socialBtn} onPress={handleAppleSignIn}>
           <FontAwesome name="apple" size={22} color="#000" />
           <Text style={styles.socialText}>Apple</Text>
         </TouchableOpacity>
@@ -143,6 +225,32 @@ export default function LoginScreen() {
           <Text style={styles.registerLink}>Register</Text>
         </TouchableOpacity>
       </View>
+
+      {resetVisible && (
+        <View style={styles.resetOverlay}>
+          <View style={styles.resetCard}>
+            <Text style={styles.resetTitle}>Forgot password?</Text>
+            <Text style={styles.resetDescription}>Enter your email and we will help you reset your password.</Text>
+            <TextInput
+              style={styles.resetInput}
+              placeholder="Email address"
+              placeholderTextColor="#999"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              value={resetEmail}
+              onChangeText={setResetEmail}
+            />
+            <View style={styles.resetActions}>
+              <TouchableOpacity onPress={() => setResetVisible(false)}>
+                <Text style={styles.cancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.resetButton} onPress={handleForgotPassword}>
+                <Text style={styles.resetButtonText}>Send link</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
 
     </View>
   )
@@ -338,5 +446,58 @@ const styles = StyleSheet.create({
   },
   loginBtnDisabled: {
     opacity: 0.6,
+  },
+  resetOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(10, 30, 63, 0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  resetCard: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 22,
+  },
+  resetTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#12213D',
+  },
+  resetDescription: {
+    color: '#667085',
+    lineHeight: 20,
+    marginTop: 8,
+    marginBottom: 18,
+  },
+  resetInput: {
+    height: 50,
+    borderWidth: 1,
+    borderColor: '#D0D5DD',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    color: '#12213D',
+  },
+  resetActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: 18,
+    marginTop: 20,
+  },
+  cancelText: {
+    color: '#667085',
+    fontWeight: '600',
+  },
+  resetButton: {
+    backgroundColor: '#0D2B6B',
+    borderRadius: 9,
+    paddingHorizontal: 16,
+    paddingVertical: 11,
+  },
+  resetButtonText: {
+    color: '#fff',
+    fontWeight: '700',
   },
 })

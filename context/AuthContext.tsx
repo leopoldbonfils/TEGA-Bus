@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, ReactNode, useContext, useState } from 'react';
 
 export interface User {
   id: string;
@@ -6,12 +6,14 @@ export interface User {
   email: string;
   phone?: string;
   role: string;
+  avatarUri?: string | null;
 }
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (user: User, token: string) => void;
+  updateUser: (updates: Partial<User>) => void;
   logout: () => void;
 }
 
@@ -26,13 +28,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setToken(authToken);
   };
 
+  const updateUser = (updates: Partial<User>) => {
+    setUser((currentUser) => (currentUser ? { ...currentUser, ...updates } : currentUser));
+  };
+
   const logout = () => {
     setUser(null);
     setToken(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout }}>
+    <AuthContext.Provider value={{ user, token, login, updateUser, logout }}>
       {children}
     </AuthContext.Provider>
   );
