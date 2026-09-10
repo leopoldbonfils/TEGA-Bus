@@ -2,13 +2,13 @@ import { useAuth } from '@/context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import {
-    Image,
-    Platform,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Image,
+  Platform,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -42,35 +42,24 @@ export default function Header({
 
   return (
     <View style={[styles.headerContainer, { paddingTop: topPadding + 10 }]}>
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor="#04325E"
-        translucent
-      />
+      <StatusBar barStyle="light-content" backgroundColor="#04325E" translucent />
 
-      {/* Left Back Button */}
-      <View style={styles.leftContainer}>
+      {/* <View style={styles.leftContainer}>
         {showBack ? (
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={handleBack}
-            activeOpacity={0.7}
-          >
+          <TouchableOpacity style={styles.backButton} onPress={handleBack} activeOpacity={0.7}>
             <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
           </TouchableOpacity>
         ) : (
           <View style={styles.sidePlaceholder} />
         )}
-      </View>
+      </View> */}
 
-      {/* Centered Title */}
       <View style={styles.centerContainer}>
         <Text style={styles.title} numberOfLines={1}>
           {title}
         </Text>
       </View>
 
-      {/* Right Avatar */}
       <View style={styles.rightContainer}>
         {showAvatar ? (
           <TouchableOpacity
