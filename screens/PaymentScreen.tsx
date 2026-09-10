@@ -8,21 +8,14 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import Header from '../components/Header';
 
 export default function PaymentScreen() {
   const [selectedMethod, setSelectedMethod] = useState('mobile');
 
   return (
     <View style={styles.container}>
-
-      {/* Payment Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={28} color="#14283F" />
-        </TouchableOpacity>
-
-        <Text style={styles.headerTitle}>Payment</Text>
-      </View>
+      <Header title="Payment" showBack onBack={() => router.back()} />
 
       <ScrollView
         style={styles.scrollView}

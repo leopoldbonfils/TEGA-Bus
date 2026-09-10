@@ -8,7 +8,7 @@ export default function TripsScreen() {
 
   return (
     <View style={styles.container}>
-    <Header/> 
+    <Header title="TEGA Bus Rwanda" showBack={false} />
     
     <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
       <Text style={styles.title}>My Trips</Text>

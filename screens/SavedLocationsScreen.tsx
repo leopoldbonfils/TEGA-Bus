@@ -1,24 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, } from 'react-native';
+import Header from '../components/Header';
 export default function SavedLocationsScreen() {
   return (
     <View style={styles.container}>
-
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons
-            name="arrow-back"
-            size={24}
-            color="#4D5662"
-          />
-        </TouchableOpacity>
-
-        <Text style={styles.headerTitle}>
-          Saved Locations
-        </Text>
-      </View>
+      <Header title="Saved Locations" showBack onBack={() => router.back()} />
 
       <ScrollView
         style={styles.scrollView}
