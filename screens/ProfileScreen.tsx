@@ -108,10 +108,13 @@ export default function ProfileScreen() {
         {/* Avatar + name */}
         <View style={styles.profileInfo}>
           <View style={styles.avatarWrap}>
-            <Image
-              source={user?.avatarUri ? { uri: user.avatarUri } : require('../assets/BusImage/profile.png')}
-              style={styles.avatar}
-            />
+            {user?.avatarUri ? (
+              <Image source={{ uri: user.avatarUri }} style={styles.avatar} />
+            ) : (
+              <View style={[styles.avatar, styles.avatarPlaceholder]}>
+                <Ionicons name="person" size={42} color="#94A3B8" />
+              </View>
+            )}
             <TouchableOpacity style={styles.editBadge} onPress={handleChangePhoto}>
               <Ionicons name="pencil" size={12} color="#fff" />
             </TouchableOpacity>
@@ -197,6 +200,11 @@ const styles = StyleSheet.create({
     width: 90,
     height: 90,
     borderRadius: 45,
+  },
+  avatarPlaceholder: {
+    backgroundColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   editBadge: {
     position: 'absolute',

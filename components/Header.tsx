@@ -77,10 +77,13 @@ export default function Header({
             onPress={() => router.push('/(tabs)/profile')}
             activeOpacity={0.8}
           >
-            <Image
-              source={user?.avatarUri ? { uri: user.avatarUri } : require('../assets/BusImage/profile.png')}
-              style={styles.avatar}
-            />
+            {user?.avatarUri ? (
+              <Image source={{ uri: user.avatarUri }} style={styles.avatar} />
+            ) : (
+              <View style={[styles.avatar, styles.avatarPlaceholder]}>
+                <Ionicons name="person" size={18} color="#CBD5E1" />
+              </View>
+            )}
           </TouchableOpacity>
         ) : (
           <View style={styles.sidePlaceholder} />
@@ -147,5 +150,10 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
+  },
+  avatarPlaceholder: {
+    backgroundColor: '#1E527D',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

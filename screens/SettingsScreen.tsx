@@ -1,14 +1,17 @@
+import { useAuth } from '@/context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 export default function SettingsScreen() {
+  const { user } = useAuth();
+
   return (
     <View style={styles.container}>
 
@@ -48,15 +51,15 @@ export default function SettingsScreen() {
 
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>
-              Jean Claude
+              {user?.name || 'User Profile'}
             </Text>
 
             <Text style={styles.profilePhone}>
-              +250 788 123 456
+              {user?.phone || user?.email || 'No contact information'}
             </Text>
           </View>
 
-          <TouchableOpacity style={styles.editButton}>
+          <TouchableOpacity style={styles.editButton} onPress={() => router.push('/personal-info')}>
             <Ionicons
               name="create-outline"
               size={16}
