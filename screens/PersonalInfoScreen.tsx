@@ -1,8 +1,10 @@
 import { useAuth } from '@/context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Header from '../components/Header';
+import { getCurrentUser } from '../services/profileService';
 
 function InfoRow({ icon, label, value }: { icon: string; label: string; value: string }) {
   return (
@@ -19,7 +21,14 @@ function InfoRow({ icon, label, value }: { icon: string; label: string; value: s
 }
 
 export default function PersonalInfoScreen() {
-  const { user } = useAuth();
+  const { user, token, updateUser } = useAuth();
+  const [loading, setLoading] = useState(Boolean(token && !user));
+
+  useEffect(() => {
+    if (!token) return;
+    setLoading(true);
+    getCurrentUser(token).then(updateUser).catch(() => undefined).finally(() => setLoading(false));
+  }, [token]);
 
   return (
     <View style={styles.container}>
@@ -27,6 +36,7 @@ export default function PersonalInfoScreen() {
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.intro}>Your account details</Text>
+        {loading && <ActivityIndicator color="#0B3D66" style={{ marginBottom: 12 }} />}
         <View style={styles.card}>
           <InfoRow icon="person-outline" label="Full name" value={user?.name || 'Not provided'} />
           <InfoRow icon="mail-outline" label="Email address" value={user?.email || 'Not provided'} />

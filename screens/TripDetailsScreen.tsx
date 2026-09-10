@@ -1,15 +1,38 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import Header from '../components/Header';
+import { useAuth } from '../context/AuthContext';
+import { getTrips, Trip } from '../services/profileService';
 
 export default function TripDetailsScreen() {
+  const { tripId } = useLocalSearchParams<{ tripId?: string }>();
+  const { token } = useAuth();
+  const [trip, setTrip] = useState<Trip | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadTrip = useCallback(async () => {
+    if (!token || !tripId) { setLoading(false); return; }
+    try {
+      const trips = await getTrips(token);
+      setTrip(trips.find((item) => item.id === tripId) || null);
+      if (!trips.some((item) => item.id === tripId)) setError('Trip details are unavailable');
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Unable to load trip details');
+    } finally { setLoading(false); }
+  }, [token, tripId]);
+
+  useEffect(() => { loadTrip(); }, [loadTrip]);
+
   return (
     <View style={styles.container}>
 
@@ -19,6 +42,8 @@ export default function TripDetailsScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {loading && <ActivityIndicator color="#04325E" />}
+        {error && <Text style={styles.errorText}>{error}</Text>}
 
         {/* Trip Summary Card */}
         <View style={styles.tripCard}>
@@ -43,8 +68,8 @@ export default function TripDetailsScreen() {
           <View style={styles.tripMiddleRow}>
 
             <View>
-              <Text style={styles.city}>Kigali City →</Text>
-              <Text style={styles.city}>Nyabugogo</Text>
+              <Text style={styles.city}>{trip?.origin || 'Origin'} →</Text>
+              <Text style={styles.city}>{trip?.destination || 'Destination'}</Text>
 
               <View style={styles.timeRow}>
                 <Ionicons
@@ -54,14 +79,14 @@ export default function TripDetailsScreen() {
                 />
 
                 <Text style={styles.timeText}>
-                  10:00 AM - 10:30 AM
+                  {trip?.departureTime || trip?.date || 'Schedule unavailable'}{trip?.arrivalTime ? ` - ${trip.arrivalTime}` : ''}
                 </Text>
               </View>
             </View>
 
             <View>
               <Text style={styles.priceCurrency}>RWF</Text>
-              <Text style={styles.price}>500</Text>
+              <Text style={styles.price}>{trip?.fare ?? '--'}</Text>
             </View>
 
           </View>
@@ -174,6 +199,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F7FC',
+  },
+  errorText: {
+    color: '#B42318',
+    textAlign: 'center',
+    marginVertical: 12,
   },
 
   /* Top header */

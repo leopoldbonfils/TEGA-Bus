@@ -3,8 +3,10 @@ import { useAuth } from '@/context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
+import { useEffect } from 'react';
 import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Toast from 'react-native-toast-message';
+import { getCurrentUser } from '../services/profileService';
 
 const accountItems = [
   { icon: 'person-outline', label: 'Personal Info' },
@@ -46,7 +48,12 @@ function ProfileRow({
 }
 
 export default function ProfileScreen() {
-  const { user, updateUser, logout } = useAuth();
+  const { user, token, updateUser, logout } = useAuth();
+
+  useEffect(() => {
+    if (!token) return;
+    getCurrentUser(token).then(updateUser).catch(() => undefined);
+  }, [token]);
 
   const handleChangePhoto = () => {
     Alert.alert('Profile photo', 'Choose how you want to update your photo.', [

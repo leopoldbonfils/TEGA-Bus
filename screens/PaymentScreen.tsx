@@ -1,17 +1,38 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import Header from '../components/Header';
+import { useAuth } from '../context/AuthContext';
+import { getPaymentMethods, PaymentMethod } from '../services/profileService';
 
 export default function PaymentScreen() {
-  const [selectedMethod, setSelectedMethod] = useState('mobile');
+  const { token } = useAuth();
+  const [methods, setMethods] = useState<PaymentMethod[]>([]);
+  const [selectedMethod, setSelectedMethod] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadMethods = useCallback(async () => {
+    if (!token) { setLoading(false); return; }
+    try {
+      setError(null);
+      const result = await getPaymentMethods(token);
+      setMethods(result);
+      setSelectedMethod(result[0]?.id || '');
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Unable to load payment methods');
+    } finally { setLoading(false); }
+  }, [token]);
+
+  useEffect(() => { loadMethods(); }, [loadMethods]);
 
   return (
     <View style={styles.container}>
@@ -23,163 +44,21 @@ export default function PaymentScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.tripCard}>
-
-          <View style={styles.priceRow}>
-            <Text style={styles.price}>RWF 500</Text>
-
-            <View style={styles.secureBadge}>
-              <Ionicons
-                name="shield-checkmark-outline"
-                size={17}
-                color="#32D875"
-              />
-              <Text style={styles.secureText}>Secure</Text>
-            </View>
-          </View>
-
+          <View style={styles.priceRow}><Text style={styles.price}>RWF 500</Text><View style={styles.secureBadge}><Ionicons name="shield-checkmark-outline" size={17} color="#32D875" /><Text style={styles.secureText}>Secure</Text></View></View>
           <View style={styles.divider} />
-
-          <View style={styles.locationContainer}>
-            <View style={styles.locationIcons}>
-              <View style={styles.startCircle} />
-
-              <View style={styles.locationLine} />
-
-              <View style={styles.endCircle} />
-            </View>
-
-            <View style={styles.locations}>
-
-              <Text style={styles.locationLabel}>From</Text>
-              <Text style={styles.locationName}>Kigali City</Text>
-
-              <Text style={styles.locationLabel}>To</Text>
-              <Text style={styles.locationName}>Nyabugogo</Text>
-
-            </View>
-
-          </View>
-
+          <Text style={styles.locationLabel}>From</Text><Text style={styles.locationName}>Kigali City</Text>
+          <Text style={styles.locationLabel}>To</Text><Text style={styles.locationName}>Nyabugogo</Text>
         </View>
 
-        {/* Payment Method */}
-        <Text style={styles.sectionTitle}>
-          Payment Method
-        </Text>
-        <TouchableOpacity
-          style={[
-            styles.paymentOption,
-            selectedMethod === 'mobile' && styles.selectedOption,
-          ]}
-          onPress={() => setSelectedMethod('mobile')}
-        >
-
-          <View
-            style={[
-              styles.radio,
-              selectedMethod === 'mobile' && styles.radioSelected,
-            ]}
-          >
-            {selectedMethod === 'mobile' && (
-              <View style={styles.radioDot} />
-            )}
-          </View>
-
-          <View style={styles.methodIcon}>
-            <Ionicons
-              name="phone-portrait-outline"
-              size={27}
-              color="#06467F"
-            />
-          </View>
-
-          <View>
-            <Text style={styles.methodTitle}>
-              Mobile Money
-            </Text>
-
-            <Text style={styles.methodSubtitle}>
-              MTN / Airtel
-            </Text>
-          </View>
-
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.paymentOption,
-            selectedMethod === 'card' && styles.selectedOption,
-          ]}
-          onPress={() => setSelectedMethod('card')}
-        >
-
-          <View
-            style={[
-              styles.radio,
-              selectedMethod === 'card' && styles.radioSelected,
-            ]}
-          >
-            {selectedMethod === 'card' && (
-              <View style={styles.radioDot} />
-            )}
-          </View>
-
-          <View style={styles.methodIcon}>
-            <Ionicons
-              name="card-outline"
-              size={27}
-              color="#4D5968"
-            />
-          </View>
-
-          <View>
-            <Text style={styles.methodTitle}>
-              Credit/Debit Card
-            </Text>
-
-            <Text style={styles.methodSubtitle}>
-              Visa, Mastercard
-            </Text>
-          </View>
-
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.paymentOption,
-            selectedMethod === 'wallet' && styles.selectedOption,
-          ]}
-          onPress={() => setSelectedMethod('wallet')}
-        >
-
-          <View
-            style={[
-              styles.radio,
-              selectedMethod === 'wallet' && styles.radioSelected,
-            ]}
-          >
-            {selectedMethod === 'wallet' && (
-              <View style={styles.radioDot} />
-            )}
-          </View>
-
-          <View style={styles.methodIcon}>
-            <Ionicons
-              name="wallet-outline"
-              size={27}
-              color="#4D5968"
-            />
-          </View>
-
-          <View>
-            <Text style={styles.methodTitle}>
-              SmartRide Wallet
-            </Text>
-
-            <Text style={styles.methodSubtitle}>
-              Balance: RWF 1,200
-            </Text>
-          </View>
-
-        </TouchableOpacity>
+        <Text style={styles.sectionTitle}>Payment Method</Text>
+        {loading && <ActivityIndicator color="#06467F" />}
+        {error && <Text style={styles.emptyText}>{error}</Text>}
+        {!loading && !error && methods.length === 0 && <Text style={styles.emptyText}>No payment methods found.</Text>}
+        {methods.map((method) => <TouchableOpacity key={method.id} style={[styles.paymentOption, selectedMethod === method.id && styles.selectedOption]} onPress={() => setSelectedMethod(method.id)}>
+          <View style={[styles.radio, selectedMethod === method.id && styles.radioSelected]}>{selectedMethod === method.id && <View style={styles.radioDot} />}</View>
+          <View style={styles.methodIcon}><Ionicons name={method.type.toLowerCase().includes('card') ? 'card-outline' : 'phone-portrait-outline'} size={27} color="#06467F" /></View>
+          <View><Text style={styles.methodTitle}>{method.label}</Text><Text style={styles.methodSubtitle}>{method.details || method.type}</Text></View>
+        </TouchableOpacity>)}
         <View style={styles.summaryCard}>
 
           <View style={styles.summaryRow}>
@@ -245,6 +124,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F7FC',
+  },
+  emptyText: {
+    color: '#64748B',
+    textAlign: 'center',
+    paddingVertical: 16,
   },
   header: {
     height: 72,

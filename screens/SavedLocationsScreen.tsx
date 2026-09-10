@@ -1,8 +1,28 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View, } from 'react-native';
 import Header from '../components/Header';
+import { useAuth } from '../context/AuthContext';
+import { getSavedLocations, SavedLocation } from '../services/profileService';
 export default function SavedLocationsScreen() {
+  const { token } = useAuth();
+  const [locations, setLocations] = useState<SavedLocation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadLocations = useCallback(async () => {
+    if (!token) { setLoading(false); return; }
+    try {
+      setError(null);
+      setLocations(await getSavedLocations(token));
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Unable to load saved locations');
+    } finally { setLoading(false); }
+  }, [token]);
+
+  useEffect(() => { loadLocations(); }, [loadLocations]);
+
   return (
     <View style={styles.container}>
       <Header title="Saved Locations" showBack onBack={() => router.back()} />
@@ -13,8 +33,10 @@ export default function SavedLocationsScreen() {
         showsVerticalScrollIndicator={false}
       >
 
-        {/* Home */}
-        <View style={styles.locationCard}>
+        {loading && <ActivityIndicator color="#063B70" />}
+        {error && <Text style={styles.emptyText}>{error}</Text>}
+        {!loading && !error && locations.length === 0 && <Text style={styles.emptyText}>No saved locations yet.</Text>}
+        {locations.map((location) => <View style={styles.locationCard} key={location.id}>
 
           <View style={styles.locationTop}>
 
@@ -27,12 +49,10 @@ export default function SavedLocationsScreen() {
             </View>
 
             <View style={styles.locationDetails}>
-              <Text style={styles.locationName}>
-                Home
-              </Text>
+              <Text style={styles.locationName}>{location.name}</Text>
 
               <Text style={styles.locationAddress}>
-                Downtown Kigali, St 42
+                {location.address}
               </Text>
             </View>
 
@@ -58,101 +78,7 @@ export default function SavedLocationsScreen() {
             </TouchableOpacity>
           </View>
 
-        </View>
-
-        {/* Work */}
-        <View style={styles.locationCard}>
-
-          <View style={styles.locationTop}>
-
-            <View style={styles.locationIcon}>
-              <Ionicons
-                name="briefcase"
-                size={20}
-                color="#063B70"
-              />
-            </View>
-
-            <View style={styles.locationDetails}>
-              <Text style={styles.locationName}>
-                Work
-              </Text>
-
-              <Text style={styles.locationAddress}>
-                Kigali Heights, Kimihurura
-              </Text>
-            </View>
-
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.actions}>
-            <TouchableOpacity>
-              <Ionicons
-                name="pencil"
-                size={21}
-                color="#4D5662"
-              />
-            </TouchableOpacity>
-
-            <TouchableOpacity>
-              <Ionicons
-                name="trash-outline"
-                size={21}
-                color="#4D5662"
-              />
-            </TouchableOpacity>
-          </View>
-
-        </View>
-
-        {/* Favorite */}
-        <View style={styles.locationCard}>
-
-          <View style={styles.locationTop}>
-
-            <View style={styles.locationIcon}>
-              <Ionicons
-                name="star"
-                size={21}
-                color="#00843D"
-              />
-            </View>
-
-            <View style={styles.locationDetails}>
-              <Text style={styles.locationName}>
-                Favorite
-              </Text>
-
-              <Text style={styles.locationAddress}>
-                Nyabugogo Bus Park
-              </Text>
-            </View>
-
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.actions}>
-            <TouchableOpacity>
-              <Ionicons
-                name="pencil"
-                size={21}
-                color="#4D5662"
-              />
-            </TouchableOpacity>
-
-            <TouchableOpacity>
-              <Ionicons
-                name="trash-outline"
-                size={21}
-                color="#4D5662"
-              />
-            </TouchableOpacity>
-          </View>
-
-        </View>
+        </View>)}
 
         {/* Add New Location Placeholder */}
         <TouchableOpacity
@@ -223,6 +149,11 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 14,
     paddingBottom: 40,
+  },
+  emptyText: {
+    color: '#64748B',
+    textAlign: 'center',
+    paddingVertical: 24,
   },
 
   /* Location cards */

@@ -1,10 +1,33 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Header from '../components/Header';
+import { useAuth } from '../context/AuthContext';
+import { getTrips, Trip } from '../services/profileService';
 export default function TripsScreen() {
   const [activeTab, setActiveTab] = useState('completed');
+  const { token } = useAuth();
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadTrips = useCallback(async () => {
+    if (!token) { setLoading(false); return; }
+    try {
+      setError(null);
+      setTrips(await getTrips(token));
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Unable to load trips');
+    } finally { setLoading(false); }
+  }, [token]);
+
+  useEffect(() => { loadTrips(); }, [loadTrips]);
+
+  const visibleTrips = trips.filter((trip) => {
+    const status = trip.status.toLowerCase();
+    return activeTab === 'completed' ? status === 'completed' : activeTab === 'active' ? status === 'active' || status === 'in transit' : status === 'upcoming' || status === 'scheduled';
+  });
 
   return (
     <View style={styles.container}>
@@ -45,121 +68,15 @@ export default function TripsScreen() {
       </View>
 
       <Text style={styles.sectionTitle}>
-        CURRENT JOURNEY
+        {activeTab === 'completed' ? 'HISTORY' : activeTab === 'active' ? 'CURRENT JOURNEY' : 'UPCOMING TRIPS'}
       </Text>
-
-      <TouchableOpacity style={styles.journeyCard} activeOpacity={0.85} onPress={() => router.push('/trip-details')}>
-
-        <View style={styles.greenBar} />
-
-        <View style={styles.journeyContent}>
-
-          <View style={styles.journeyHeader}>
-
-            <View style={styles.busRow}>
-              <Ionicons name="bus" size={18} color="#0B2F55" />
-              <Text style={styles.busText}>Bus 402 • Route 3</Text>
-            </View>
-
-            <View style={styles.statusPill}>
-              <Text style={styles.statusText}>In Transit</Text>
-            </View>
-
-          </View>
-          <View style={styles.pointRow}>
-            <View style={styles.originDot} />
-            <View>
-              <Text style={styles.pointLabel}>Origin</Text>
-              <Text style={styles.pointName}>Kimironko</Text>
-              <Text style={styles.pointTime}>14:30 PM</Text>
-            </View>
-          </View>
-
-          <View style={styles.timelineLine} />
-          <View style={styles.pointRow}>
-            <View style={styles.destinationDot} />
-            <View>
-              <Text style={styles.pointLabel}>Destination</Text>
-              <Text style={styles.pointName}>Downtown Terminal</Text>
-              <Text style={styles.pointTime}>Est. 15:15 PM</Text>
-            </View>
-          </View>
-
-        </View>
-
-      </TouchableOpacity>
-
-      <Text style={styles.sectionTitle}>
-        HISTORY
-      </Text>
-      <TouchableOpacity style={styles.historyCard} activeOpacity={0.85} onPress={() => router.push('/trip-details')}>
-
-        <View style={styles.historyHeader}>
-          <Text style={styles.historyDate}>Today, 08:15 AM</Text>
-          <View style={styles.completedPill}>
-            <Ionicons name="checkmark-circle" size={14} color="#0B3D66" />
-            <Text style={styles.completedText}>Completed</Text>
-          </View>
-        </View>
-
-        <View style={styles.historyBody}>
-          <View>
-            <Text style={styles.routeText}>Kigali City → Nyabugogo</Text>
-            <View style={styles.paymentRow}>
-              <Ionicons name="card-outline" size={14} color="#596575" />
-              <Text style={styles.paymentText}>Wallet Payment</Text>
-            </View>
-          </View>
-          <Text style={styles.priceText}>RWF 500</Text>
-        </View>
-
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.historyCard} activeOpacity={0.85} onPress={() => router.push('/trip-details')}>
-
-        <View style={styles.historyHeader}>
-          <Text style={styles.historyDate}>Yesterday, 17:45 PM</Text>
-          <View style={styles.completedPill}>
-            <Ionicons name="checkmark-circle" size={14} color="#0B3D66" />
-            <Text style={styles.completedText}>Completed</Text>
-          </View>
-        </View>
-
-        <View style={styles.historyBody}>
-          <View>
-            <Text style={styles.routeText}>Remera → Downtown</Text>
-            <View style={styles.paymentRow}>
-              <Ionicons name="card-outline" size={14} color="#596575" />
-              <Text style={styles.paymentText}>Wallet Payment</Text>
-            </View>
-          </View>
-          <Text style={styles.priceText}>RWF 500</Text>
-        </View>
-
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.historyCard} activeOpacity={0.85} onPress={() => router.push('/trip-details')}>
-
-        <View style={styles.historyHeader}>
-          <Text style={styles.historyDate}>Oct 24, 09:00 AM</Text>
-          <View style={styles.completedPill}>
-            <Ionicons name="checkmark-circle" size={14} color="#0B3D66" />
-            <Text style={styles.completedText}>Completed</Text>
-          </View>
-        </View>
-
-        <View style={styles.historyBody}>
-          <View>
-            <Text style={styles.routeText}>Kacyiru → Kimironko</Text>
-            <View style={styles.paymentRow}>
-              <Ionicons name="card-outline" size={14} color="#596575" />
-              <Text style={styles.paymentText}>Wallet Payment</Text>
-            </View>
-          </View>
-          <Text style={styles.priceText}>RWF 450</Text>
-        </View>
-
-      </TouchableOpacity>
+      {loading && <ActivityIndicator color="#0B3D66" />}
+      {error && <Text style={styles.emptyText}>{error}</Text>}
+      {!loading && !error && visibleTrips.length === 0 && <Text style={styles.emptyText}>No trips found.</Text>}
+      {visibleTrips.map((trip) => <TouchableOpacity key={trip.id} style={styles.historyCard} activeOpacity={0.85} onPress={() => router.push({ pathname: '/trip-details', params: { tripId: trip.id } })}>
+        <View style={styles.historyHeader}><Text style={styles.historyDate}>{trip.date}</Text><View style={styles.completedPill}><Ionicons name="checkmark-circle" size={14} color="#0B3D66" /><Text style={styles.completedText}>{trip.status}</Text></View></View>
+        <View style={styles.historyBody}><View><Text style={styles.routeText}>{trip.origin} → {trip.destination}</Text><View style={styles.paymentRow}><Ionicons name="card-outline" size={14} color="#596575" /><Text style={styles.paymentText}>{trip.paymentMethod || 'Payment'}</Text></View></View><Text style={styles.priceText}>RWF {trip.fare}</Text></View>
+      </TouchableOpacity>)}
 
   </ScrollView>
     </View>
@@ -180,6 +97,11 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingTop: 20,
     paddingBottom: 40,
+  },
+  emptyText: {
+    color: '#64748B',
+    textAlign: 'center',
+    paddingVertical: 24,
   },
 
   title: {

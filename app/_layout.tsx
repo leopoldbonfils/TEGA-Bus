@@ -11,6 +11,7 @@ export default function RootLayout() {
         <Stack.Screen name="login" />
         <Stack.Screen name="register" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="bus-details" />
         <Stack.Screen name="settings" />
         <Stack.Screen name="saved-locations" />
         <Stack.Screen name="trip-details" />
