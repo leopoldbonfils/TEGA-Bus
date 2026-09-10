@@ -8,6 +8,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import Header from '../components/Header';
 
 export default function SettingsScreen() {
   const { user } = useAuth();
@@ -15,22 +16,7 @@ export default function SettingsScreen() {
   return (
     <View style={styles.container}>
 
-      {/* Header */}
-      <View style={styles.header}>
-
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons
-            name="arrow-back"
-            size={25}
-            color="#12213D"
-          />
-        </TouchableOpacity>
-
-        <Text style={styles.headerTitle}>
-          Settings
-        </Text>
-
-      </View>
+      <Header title="Settings" showBack onBack={() => router.back()} />
 
       <ScrollView
         style={styles.scrollView}

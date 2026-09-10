@@ -59,6 +59,22 @@ export interface RecommendedBus {
   isApproaching: boolean;
   isMoving?: boolean;
   motionStatus?: 'MOVING' | 'PARKED';
+  rating?: number;
+  seatsRemaining?: number;
+  tripStops?: Array<{
+    name: string;
+    status?: 'COMPLETED' | 'CURRENT' | 'UPCOMING';
+    etaMinutes?: number;
+    time?: string;
+  }>;
+  rating?: number;
+  seatsRemaining?: number;
+  tripStops?: Array<{
+    name: string;
+    status?: 'COMPLETED' | 'CURRENT' | 'UPCOMING';
+    etaMinutes?: number;
+    time?: string;
+  }>;
 }
 
 export interface UpcomingTrip {
@@ -247,10 +263,22 @@ export const getNearbyBuses = async (
   return getNearbyBusesForDestination(latitude, longitude);
 };
 
+/** Fetch one live bus from the backend using the passenger's location. */
+export const getBusDetails = async (
+  latitude: number,
+  longitude: number,
+  busId: string,
+): Promise<RecommendedBus> => {
+  const buses = await getNearbyBuses(latitude, longitude);
+  const bus = buses.find((candidate) => candidate.id === busId);
 
-/**
- * Fetch dynamic upcoming trip for the passenger's current location from real database data.
- */
+  if (!bus) {
+    throw new Error('Bus details are no longer available');
+  }
+
+  return bus;
+};
+
 export const getUpcomingTrip = async (
   latitude: number,
   longitude: number,

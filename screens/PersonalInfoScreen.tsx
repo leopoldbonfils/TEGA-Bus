@@ -2,6 +2,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Header from '../components/Header';
 
 function InfoRow({ icon, label, value }: { icon: string; label: string; value: string }) {
   return (
@@ -22,13 +23,7 @@ export default function PersonalInfoScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={22} color="#14283F" />
-        </TouchableOpacity>
-        <Text style={styles.title}>Personal Information</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <Header title="Personal Information" showBack onBack={() => router.back()} />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.intro}>Your account details</Text>

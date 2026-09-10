@@ -1,638 +1,83 @@
-import React from 'react';
-import {View,Text,StyleSheet,ScrollView,TouchableOpacity,} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Header from '../components/Header';
+import { getBusDetails, RecommendedBus } from '../services/busService';
 
-export default function BusDetailsScreen({ navigation }: any) {
+export default function BusDetailsScreen() {
+  const params = useLocalSearchParams<{ busId?: string; userLat?: string; userLng?: string }>();
+  const [bus, setBus] = useState<RecommendedBus | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadBus = useCallback(async () => {
+    if (!params.busId || !params.userLat || !params.userLng) {
+      setError('Bus location is unavailable');
+      setLoading(false);
+      return;
+    }
+    try {
+      setError(null);
+      const details = await getBusDetails(Number(params.userLat), Number(params.userLng), params.busId);
+      setBus(details);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Unable to load bus details');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [params.busId, params.userLat, params.userLng]);
+
+  useEffect(() => { loadBus(); }, [loadBus]);
+  const refresh = useCallback(() => { setRefreshing(true); loadBus(); }, [loadBus]);
+
+  if (loading) {
+    return <View style={styles.container}><Header title="Bus Details" showBack onBack={() => router.back()} /><View style={styles.centerState}><ActivityIndicator size="large" color="#04325E" /><Text style={styles.stateText}>Loading live bus details...</Text></View></View>;
+  }
+
+  if (error || !bus) {
+    return <View style={styles.container}><Header title="Bus Details" showBack onBack={() => router.back()} /><View style={styles.centerState}><Ionicons name="cloud-offline-outline" size={44} color="#64748B" /><Text style={styles.errorText}>{error || 'Bus details are unavailable'}</Text><TouchableOpacity style={styles.retryButton} onPress={loadBus}><Text style={styles.retryText}>Try Again</Text></TouchableOpacity></View></View>;
+  }
+
+  const status = bus.status || (bus.isMoving ? 'MOVING' : 'PARKED');
   return (
     <View style={styles.container}>
-
-      {/* Header */}
-      <View style={styles.header}>
-
-        <View style={styles.headerLeft}>
-          <View style={styles.profileCircle}>
-            <Ionicons
-              name="person-outline"
-              size={22}
-              color="#12213D"
-            />
-          </View>
-
-          <Text style={styles.headerTitle}>
-            SmartRide Rwanda
-          </Text>
-        </View>
-
-        <TouchableOpacity>
-          <Ionicons
-            name="notifications-outline"
-            size={27}
-            color="#4B4F58"
-          />
-        </TouchableOpacity>
-
-      </View>
-
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}showsVerticalScrollIndicator={false}>
-        <View style={styles.busHeader}>
-
-          <View>
-            <Text style={styles.busNumber}>
-              BUS 101
-            </Text>
-
-            <View style={styles.routeRow}>
-              <Ionicons
-                name="git-compare-outline"
-                size={20}
-                color="#4B4F58"
-              />
-
-              <Text style={styles.routeText}>
-                Kigali → Nyabugogo
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.activeBadge}>
-            <View style={styles.activeDot} />
-
-            <Text style={styles.activeText}> Active</Text>
-          </View>
-
-        </View>
-
-        {/* Driver Card */}
-        <View style={styles.card}>
-
-          <View style={styles.driverImage}>
-            <Ionicons
-              name="person"
-              size={32}
-              color="#6B7280"
-            />
-          </View>
-
-          <View style={styles.driverInfo}>
-
-            <Text style={styles.smallTitle}>
-              DRIVER
-            </Text>
-
-            <Text style={styles.driverName}>
-              Jean Pierre
-            </Text>
-
-            <View style={styles.ratingRow}>
-              <Text style={styles.star}>
-                ★
-              </Text>
-
-              <Text style={styles.rating}>
-                4.8
-              </Text>
-            </View>
-
-          </View>
-
-        </View>
-        <View style={styles.card}>
-
-        <Text style={styles.smallTitle}>CURRENT STATUS</Text>
-         <View style={styles.statusRow}>
-
-            <Ionicons
-              name="navigate-outline"
-              size={25}
-              color="#12213D"
-            />
-
-            <Text style={styles.statusText}>
-              Approaching Kimironko
-            </Text>
-
-          </View>
-
-          <View style={styles.line} />
-
-          <View style={styles.nextStopRow}>
-
-            <Text style={styles.nextStop}>
-              Next Stop: <Text style={styles.stopName}>
-                Remera Market
-              </Text>
-            </Text>
-
-            <Text style={styles.minutes}>
-              in 3 mins
-            </Text>
-
-          </View>
-
-        </View>
-
-        {/* Availability */}
-        <View style={styles.card}>
-
-          <View style={styles.availabilityHeader}>
-
-            <Text style={styles.smallTitle}>
-              AVAILABILITY
-            </Text>
-
-            <Text style={styles.fullText}>
-              60% Full
-            </Text>
-
-          </View>
-
-          <View style={styles.progressBackground}>
-            <View style={styles.progress} />
-          </View>
-
-          <Text style={styles.seats}>
-            Approx. 24 seats remaining
-          </Text>
-
-        </View>
-
-        {/* Trip Progress */}
-        <View style={styles.card}>
-
-          <Text style={styles.tripProgressTitle}>
-            Trip Progress
-          </Text>
-
-          {/* Kigali */}
-          <View style={styles.progressItem}>
-
-            <View style={styles.timeline}>
-
-              <View style={styles.completedDot} />
-
-              <View style={styles.timelineLine} />
-
-            </View>
-
-            <View style={styles.stopInfo}>
-
-              <Text style={styles.stopTitle}>
-                Kigali Downtown
-              </Text>
-
-              <Text style={styles.timeText}>Departed 10:15 AM </Text>
-            </View>
-
-          </View>
-          <View style={styles.progressItem}>
-
-            <View style={styles.timeline}>
-
-              <View style={styles.currentCircle}>
-                <View style={styles.currentDot} />
-              </View>
-
-              <View style={styles.timelineLine} />
-
-            </View>
-
-            <View style={styles.stopInfo}>
-
-            <Text style={styles.currentStop}> Kimironko</Text>
-
-            <Text style={styles.approachingText}> Approaching now</Text>
-
-            </View>
-
-          </View>
-
-          {/* Remera */}
-          <View style={styles.progressItem}>
-
-            <View style={styles.timeline}>
-
-              <View style={styles.futureDot} />
-
-              <View style={styles.timelineLineLight} />
-
-            </View>
-
-            <View style={styles.stopInfo}>
-
-              <Text style={styles.futureStop}>
-                Remera Market
-              </Text>
-
-              <Text style={styles.timeText}>
-                ETA: 3 mins
-              </Text>
-
-            </View>
-
-          </View>
-
-          {/* Nyabugogo */}
-          <View style={styles.progressItem}>
-
-            <View style={styles.timeline}>
-
-              <View style={styles.futureDot} />
-
-            </View>
-
-            <View style={styles.stopInfo}>
-
-              <Text style={styles.futureStop}>
-                Nyabugogo Bus Park
-              </Text>
-
-              <Text style={styles.timeText}>
-                ETA: 25 mins
-              </Text>
-
-            </View>
-
-          </View>
-
-        </View>
-
-        {/* Track Live Button */}
-        <TouchableOpacity style={styles.trackButton}>
-
-          <Ionicons
-            name="location-outline"
-            size={27}
-            color="#FFFFFF"
-          />
-
-          <Text style={styles.trackButtonText}>
-            Track Live
-          </Text>
-
-        </TouchableOpacity>
-
+      <Header title="Bus Details" showBack onBack={() => router.back()} />
+      <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}>
+        <View style={styles.titleRow}><View><Text style={styles.busNumber}>BUS {bus.busNumber}</Text><Text style={styles.routeText}>{bus.routeName || bus.routeNumber}</Text></View><View style={styles.statusBadge}><View style={styles.statusDot} /><Text style={styles.statusText}>{status}</Text></View></View>
+        <View style={styles.card}><Text style={styles.label}>DRIVER</Text><Text style={styles.value}>{bus.driverName || 'Unavailable'}</Text>{bus.rating != null && <Text style={styles.secondary}>Rating {bus.rating}</Text>}</View>
+        <View style={styles.card}><Text style={styles.label}>CURRENT STATUS</Text><View style={styles.row}><Ionicons name="navigate-outline" size={24} color="#04325E" /><Text style={styles.value}>{bus.currentStop || 'In transit'}</Text></View><View style={styles.divider} /><View style={styles.nextRow}><Text style={styles.secondary}>Next stop: {bus.nextStop || 'Unavailable'}</Text><Text style={styles.secondary}>{bus.etaMinutes} min</Text></View></View>
+        <View style={styles.card}><View style={styles.nextRow}><Text style={styles.label}>LIVE INFORMATION</Text><Text style={styles.secondary}>{bus.speed} km/h</Text></View><Text style={styles.secondary}>Distance: {bus.distanceKm} km</Text>{bus.capacity != null && <Text style={styles.secondary}>Capacity: {bus.capacity}</Text>}{bus.seatsRemaining != null && <Text style={styles.secondary}>Seats remaining: {bus.seatsRemaining}</Text>}</View>
+        {bus.tripStops && bus.tripStops.length > 0 && <View style={styles.card}><Text style={styles.label}>TRIP PROGRESS</Text>{bus.tripStops.map((stop, index) => <View style={styles.stopRow} key={`${stop.name}-${index}`}><View style={[styles.stopDot, stop.status === 'CURRENT' && styles.currentDot]} /><View><Text style={styles.value}>{stop.name}</Text><Text style={styles.secondary}>{stop.status || 'UPCOMING'}{stop.etaMinutes != null ? ` - ${stop.etaMinutes} min` : ''}</Text></View></View>)}</View>}
       </ScrollView>
-
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-
-  container: {
-    flex: 1,
-    backgroundColor: '#F7F8FC',
-  },
-
-  /* Header */
-
-  header: {
-    height: 90,
-    backgroundColor: '#F7F8FC',
-    borderBottomWidth: 1,
-    borderBottomColor: '#D8DCE5',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-  },
-
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  profileCircle: {
-    width: 43,
-    height: 43,
-    borderRadius: 22,
-    backgroundColor: '#E1EAFB',
-    borderWidth: 1,
-    borderColor: '#B9C4D6',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  headerTitle: {
-    fontSize: 27,
-    fontWeight: '700',
-    color: '#08294D',
-    marginLeft: 12,
-  },
-
-  /* Scroll */
-
-  scrollView: {
-    flex: 1,
-  },
-
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-
-  /* Bus */
-
-  busHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 28,
-  },
-
-  busNumber: {
-    fontSize: 42,
-    fontWeight: '800',
-    color: '#08294D',
-  },
-
-  routeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 7,
-  },
-
-  routeText: {
-    fontSize: 21,
-    color: '#4B4F58',
-    marginLeft: 7,
-  },
-
-  activeBadge: {
-    backgroundColor: '#D7F7E7',
-    borderRadius: 20,
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  activeDot: {
-    width: 11,
-    height: 11,
-    borderRadius: 6,
-    backgroundColor: '#087D3F',
-    marginRight: 6,
-  },
-
-  activeText: {
-    color: '#087D3F',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-
-  /* Cards */
-
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#C8CDD8',
-    borderRadius: 12,
-    padding: 27,
-    marginBottom: 22,
-  },
-
-  /* Driver */
-
-  driverImage: {
-    width: 65,
-    height: 65,
-    borderRadius: 33,
-    backgroundColor: '#E8EBF0',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 20,
-  },
-
-  driverInfo: {
-    flex: 1,
-  },
-
-  smallTitle: {
-    fontSize: 16,
-    color: '#4B4F58',
-    letterSpacing: 0.5,
-  },
-
-  driverName: {
-    fontSize: 27,
-    fontWeight: '700',
-    color: '#10243D',
-    marginTop: 7,
-  },
-
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 7,
-  },
-
-  star: {
-    fontSize: 20,
-    color: '#E7AA00',
-    marginRight: 6,
-  },
-
-  rating: {
-    fontSize: 19,
-    color: '#4B4F58',
-  },
-
-  /* Status */
-
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 10,
-  },
-
-  statusText: {
-    fontSize: 22,
-    color: '#10243D',
-    marginLeft: 10,
-  },
-
-  line: {
-    height: 1,
-    backgroundColor: '#E0E5EE',
-    marginVertical: 15,
-  },
-
-  nextStopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-
-  nextStop: {
-    fontSize: 19,
-    color: '#4B4F58',
-  },
-
-  stopName: {
-    color: '#10243D',
-  },
-
-  minutes: {
-    fontSize: 18,
-    color: '#087D3F',
-    fontWeight: '600',
-  },
-
-  /* Availability */
-
-  availabilityHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-
-  fullText: {
-    fontSize: 31,
-    fontWeight: '700',
-    color: '#08294D',
-  },
-
-  progressBackground: {
-    height: 16,
-    backgroundColor: '#DCE8FA',
-    borderRadius: 10,
-    marginTop: 12,
-    overflow: 'hidden',
-  },
-
-  progress: {
-    width: '60%',
-    height: '100%',
-    backgroundColor: '#08294D',
-    borderRadius: 10,
-  },
-
-  seats: {
-    textAlign: 'center',
-    fontSize: 17,
-    color: '#4B4F58',
-    marginTop: 10,
-  },
-
-  /* Trip Progress */
-
-  tripProgressTitle: {
-    fontSize: 27,
-    fontWeight: '700',
-    color: '#10243D',
-    marginBottom: 20,
-  },
-
-  progressItem: {
-    flexDirection: 'row',
-    minHeight: 80,
-  },
-
-  timeline: {
-    width: 35,
-    alignItems: 'center',
-    position: 'relative',
-  },
-
-  completedDot: {
-    width: 13,
-    height: 13,
-    borderRadius: 7,
-    backgroundColor: '#08294D',
-  },
-
-  currentCircle: {
-    width: 25,
-    height: 25,
-    borderRadius: 13,
-    borderWidth: 3,
-    borderColor: '#BCE9D0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  currentDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#0AA45C',
-  },
-
-  futureDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#DCE8FA',
-  },
-
-  timelineLine: {
-    position: 'absolute',
-    top: 13,
-    width: 3,
-    height: 70,
-    backgroundColor: '#DCE8FA',
-  },
-
-  timelineLineLight: {
-    position: 'absolute',
-    top: 13,
-    width: 3,
-    height: 70,
-    backgroundColor: '#DCE8FA',
-  },
-
-  stopInfo: {
-    flex: 1,
-    marginLeft: 8,
-  },
-
-  stopTitle: {
-    fontSize: 22,
-    color: '#10243D',
-    fontWeight: '500',
-  },
-
-  currentStop: {
-    fontSize: 22,
-    color: '#10243D',
-    fontWeight: '700',
-  },
-
-  futureStop: {
-    fontSize: 21,
-    color: '#4B4F58',
-  },
-
-  timeText: {
-    fontSize: 18,
-    color: '#4B4F58',
-    marginTop: 4,
-  },
-
-  approachingText: {
-    fontSize: 18,
-    color: '#087D3F',
-    marginTop: 4,
-  },
-
-  /* Track Button */
-
-  trackButton: {
-    height: 76,
-    backgroundColor: '#063B70',
-    borderRadius: 10,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-
-  trackButtonText: {
-    color: '#FFFFFF',
-    fontSize: 28,
-    fontWeight: '500',
-    marginLeft: 10,
-  },
-
+  container: { flex: 1, backgroundColor: '#F7F8FC' },
+  content: { padding: 18, paddingBottom: 32 },
+  centerState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
+  stateText: { color: '#64748B', marginTop: 12 },
+  errorText: { color: '#334155', textAlign: 'center', marginTop: 12 },
+  retryButton: { backgroundColor: '#04325E', paddingHorizontal: 22, paddingVertical: 12, borderRadius: 8, marginTop: 18 },
+  retryText: { color: '#FFFFFF', fontWeight: '700' },
+  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  busNumber: { color: '#08294D', fontSize: 26, fontWeight: '800' },
+  routeText: { color: '#64748B', fontSize: 15, marginTop: 4 },
+  statusBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#DCFCE7', borderRadius: 16, paddingHorizontal: 10, paddingVertical: 7 },
+  statusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#16A34A', marginRight: 6 },
+  statusText: { color: '#166534', fontSize: 12, fontWeight: '700' },
+  card: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 18, marginBottom: 14, shadowColor: '#0F172A', shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 },
+  label: { color: '#64748B', fontSize: 11, fontWeight: '800', letterSpacing: 0.8, marginBottom: 9 },
+  value: { color: '#12213D', fontSize: 17, fontWeight: '700' },
+  secondary: { color: '#64748B', fontSize: 14, marginTop: 5 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  divider: { height: 1, backgroundColor: '#E2E8F0', marginVertical: 14 },
+  nextRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  stopRow: { flexDirection: 'row', alignItems: 'center', marginTop: 14 },
+  stopDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: '#CBD5E1', marginRight: 12 },
+  currentDot: { backgroundColor: '#10B981' },
 });
