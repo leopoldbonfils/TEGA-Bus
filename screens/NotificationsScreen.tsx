@@ -1,175 +1,216 @@
-import {View,Text,StyleSheet,TouchableOpacity,ScrollView} from 'react-native';
-import React from 'react';
+import {View, Text, StyleSheet,TouchableOpacity, ScrollView, ActivityIndicator,} from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import Header from '../components/Header';
+import { useAuth } from '../context/AuthContext';
+import { getAlerts, Alert, AlertType } from '../services/alertService';
+
+
+function formatTime(iso: string): string {
+  const date = new Date(iso);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHrs = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins} min ago`;
+  if (diffHrs < 24) return `${diffHrs} hr ago`;
+  if (diffDays === 1) return 'Yesterday';
+  return `${diffDays} days ago`;
+}
+
+function isToday(iso: string): boolean {
+  const date = new Date(iso);
+  const now = new Date();
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate()
+  );
+}
+
+/** Map an alert type to the appropriate icon name and style variant */
+function getAlertStyle(type: AlertType): {
+  icon: keyof typeof Ionicons.glyphMap;
+  circleStyle: 'iconCircle' | 'warningCircle' | 'successCircle';
+  titleStyle: 'alertTitle' | 'serviceTitle';
+  timeStyle: 'time' | 'serviceTime';
+  cardStyle: 'alertCard' | 'serviceCard';
+  iconColor: string;
+} {
+  switch (type) {
+    case 'SERVICE_ALERT':
+      return {
+        icon: 'warning',
+        circleStyle: 'warningCircle',
+        titleStyle: 'serviceTitle',
+        timeStyle: 'serviceTime',
+        cardStyle: 'serviceCard',
+        iconColor: '#B42318',
+      };
+    case 'BUS_APPROACHING':
+      return {
+        icon: 'bus-outline',
+        circleStyle: 'iconCircle',
+        titleStyle: 'alertTitle',
+        timeStyle: 'time',
+        cardStyle: 'alertCard',
+        iconColor: '#0B3D66',
+      };
+    case 'DELAY':
+      return {
+        icon: 'time-outline',
+        circleStyle: 'warningCircle',
+        titleStyle: 'serviceTitle',
+        timeStyle: 'serviceTime',
+        cardStyle: 'serviceCard',
+        iconColor: '#B42318',
+      };
+    case 'ROUTE_UPDATE':
+      return {
+        icon: 'location-outline',
+        circleStyle: 'iconCircle',
+        titleStyle: 'alertTitle',
+        timeStyle: 'time',
+        cardStyle: 'alertCard',
+        iconColor: '#0B3D66',
+      };
+    case 'GENERAL':
+    default:
+      return {
+        icon: 'notifications-outline',
+        circleStyle: 'iconCircle',
+        titleStyle: 'alertTitle',
+        timeStyle: 'time',
+        cardStyle: 'alertCard',
+        iconColor: '#0B3D66',
+      };
+  }
+}
 
 export default function NotificationsScreen() {
+  const { token } = useAuth();
+
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchAlerts = useCallback(async () => {
+    if (!token) {
+      setLoading(false);
+      setError('Please log in to view alerts');
+      return;
+    }
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getAlerts(token);
+      setAlerts(data);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to load alerts';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    fetchAlerts();
+  }, [fetchAlerts]);
+
+  const todayAlerts = alerts.filter((a) => isToday(a.createdAt));
+  const earlierAlerts = alerts.filter((a) => !isToday(a.createdAt));
 
   return (
-   <View style={styles.container}>
-      <Header/> 
-      
+    <View style={styles.container}>
+      <Header />
+
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-  <Text style={styles.title}>Notifications</Text>
-  <Text style={styles.sectionTitle}>Today</Text>
-  <View style={styles.alertCard}>
+        <Text style={styles.title}>Notifications</Text>
 
-  <View style={styles.iconCircle}>
-  <Ionicons name="bus-outline" size={30}color="#0B3D66"/>
-  </View>
-  <View style={styles.alertInfo}>
-  <View style={styles.alertHeader}>
-  <Text style={styles.alertTitle}>Bus Arriving Soon</Text>
-  <Text style={styles.time}> 2 min ago</Text>
-  </View>
-  <Text style={styles.alertDescription}>Your bus is arriving in 5 minutes at{'\n'} Kigali Heights station.</Text>
-  </View>
-  </View>
-  <View style={styles.alertCard}>
-  <View style={styles.iconCircle}>
-  <Ionicons name="location-outline"size={30}color="#0B3D66" />
-        </View>
-
-
-        <View style={styles.alertInfo}>
-
-          <View style={styles.alertHeader}>
-
-            <Text style={styles.alertTitle}>
-              Approaching Destination
-            </Text>
-
-            <Text style={styles.time}>
-              15 min ago
-            </Text>
-
+        {loading && (
+          <View style={styles.centeredState}>
+            <ActivityIndicator size="large" color="#0B3D66" />
+            <Text style={styles.stateText}>Loading alerts...</Text>
           </View>
+        )}
 
-
-          <Text style={styles.alertDescription}>
-            You are approaching your destination.{'\n'}
-            Prepare to disembark.
-          </Text>
-
-        </View>
-
-      </View>
-
-
-
-      <View style={styles.serviceCard}>
-
-        <View style={styles.warningCircle}>
-          <Ionicons
-            name="warning"
-            size={32}
-            color="#B42318"
-          />
-        </View>
-
-
-        <View style={styles.alertInfo}>
-
-          <View style={styles.alertHeader}>
-
-            <Text style={styles.serviceTitle}>
-              Service Alert
-            </Text>
-
-            <Text style={styles.serviceTime}>1 hr ago</Text>
-
+        {/*  Error state  */}
+        {!loading && error && (
+          <View style={styles.centeredState}>
+            <Ionicons name="cloud-offline-outline" size={40} color="#596575" />
+            <Text style={styles.stateText}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={fetchAlerts}>
+              <Text style={styles.retryText}>Retry</Text>
+            </TouchableOpacity>
           </View>
+        )}
 
-
-          <Text style={styles.alertDescription}>
-            Route 101 has a delay due to traffic in{'\n'}
-            the downtown area. Expected delay:{'\n'}
-            15 mins.
-          </Text>
-
-        </View>
-
-      </View>
-
-      <Text style={styles.sectionTitle}>
-        Earlier
-      </Text>
-      <View style={styles.alertCard}>
-
-        <View style={styles.successCircle}>
-          <Ionicons
-            name="checkmark-circle-outline"
-            size={32}
-            color="#287A5A"
-          />
-        </View>
-
-
-        <View style={styles.alertInfo}>
-
-          <View style={styles.alertHeader}>
-
-            <Text style={styles.alertTitle}>
-              Trip Completed
-            </Text>
-
-            <Text style={styles.time}>
-              Yesterday
-            </Text>
-
+        {/*  Empty state  */}
+        {!loading && !error && alerts.length === 0 && (
+          <View style={styles.centeredState}>
+            <Ionicons name="notifications-off-outline" size={40} color="#596575" />
+            <Text style={styles.stateText}>No alerts yet</Text>
+            <Text style={styles.stateSubText}>You'll be notified when TEGA Bus sends service updates.</Text>
           </View>
+        )}
 
+        {/*  Today alerts  */}
+        {!loading && !error && todayAlerts.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Today</Text>
+            {todayAlerts.map((alert) => {
+              const style = getAlertStyle(alert.type);
+              return (
+                <View key={alert.id} style={styles[style.cardStyle]}>
+                  <View style={styles[style.circleStyle]}>
+                    <Ionicons name={style.icon} size={style.circleStyle === 'warningCircle' ? 32 : 30} color={style.iconColor} />
+                  </View>
+                  <View style={styles.alertInfo}>
+                    <View style={styles.alertHeader}>
+                      <Text style={styles[style.titleStyle]}>{alert.title}</Text>
+                      <Text style={styles[style.timeStyle]}>{formatTime(alert.createdAt)}</Text>
+                    </View>
+                    <Text style={styles.alertDescription}>{alert.message}</Text>
+                  </View>
+                </View>
+              );
+            })}
+          </>
+        )}
 
-          <Text style={styles.alertDescription}>
-            Your trip has been completed. Please{'\n'}
-            take a moment to rate your driver.
-          </Text>
-
-
-          <TouchableOpacity style={styles.rateButton}>
-            <Text style={styles.rateText}>
-              Rate Trip
-            </Text>
-          </TouchableOpacity>
-
-        </View>
-
-      </View>
-
-      <View style={styles.alertCard}>
-
-        <View style={styles.iconCircle}>
-          <Ionicons
-            name="wallet-outline"
-            size={30}
-            color="#0B3D66"
-          />
-        </View>
-        <View style={styles.alertInfo}>
-
-          <View style={styles.alertHeader}>
-
-            <Text style={styles.alertTitle}>
-              Wallet Top-up
-            </Text>
-
-            <Text style={styles.time}>
-              Yesterday
-            </Text>
-
-          </View>
-          <Text style={styles.alertDescription}>
-            Successfully added 5,000 RWF to{'\n'}
-            your TEGA Bus wallet.
-          </Text>
-
-        </View>
-
-      </View>
- </ScrollView>
+        {/*  Earlier alerts  */}
+        {!loading && !error && earlierAlerts.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Earlier</Text>
+            {earlierAlerts.map((alert) => {
+              const style = getAlertStyle(alert.type);
+              return (
+                <View key={alert.id} style={styles[style.cardStyle]}>
+                  <View style={styles[style.circleStyle]}>
+                    <Ionicons name={style.icon} size={style.circleStyle === 'warningCircle' ? 32 : 30} color={style.iconColor} />
+                  </View>
+                  <View style={styles.alertInfo}>
+                    <View style={styles.alertHeader}>
+                      <Text style={styles[style.titleStyle]}>{alert.title}</Text>
+                      <Text style={styles[style.timeStyle]}>{formatTime(alert.createdAt)}</Text>
+                    </View>
+                    <Text style={styles.alertDescription}>{alert.message}</Text>
+                  </View>
+                </View>
+              );
+            })}
+          </>
+        )}
+      </ScrollView>
     </View>
   );
 }
+
+
+
 const styles = StyleSheet.create({
 
   container: {
@@ -258,7 +299,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 20,
     flexDirection: 'row',
-    marginBottom: 40,
+    marginBottom: 14,
   },
 
   warningCircle: {
@@ -284,6 +325,7 @@ const styles = StyleSheet.create({
     color: '#8B1E1E',
     marginLeft: 10,
   },
+
   successCircle: {
     width: 72,
     height: 72,
@@ -293,6 +335,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 20,
   },
+
   rateButton: {
     borderWidth: 1,
     borderColor: '#315979',
@@ -309,4 +352,40 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
+
+  centeredState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    gap: 12,
+  },
+
+  stateText: {
+    fontSize: 15,
+    color: '#596575',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+
+  stateSubText: {
+    fontSize: 13,
+    color: '#8A97A8',
+    textAlign: 'center',
+    paddingHorizontal: 20,
+  },
+
+  retryButton: {
+    borderWidth: 1,
+    borderColor: '#315979',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    marginTop: 8,
+  },
+
+  retryText: {
+    fontSize: 14,
+    color: '#315979',
+    fontWeight: '500',
+  },
 });
