@@ -54,6 +54,7 @@ export default function RootLayout() {
         <Stack.Screen name="saved-locations" />
         <Stack.Screen name="trip-details" />
         <Stack.Screen name="payment" />
+        <Stack.Screen name="personal-info" />
       </Stack>
       <StatusBar style="auto" />
       <Toast />

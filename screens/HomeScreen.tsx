@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text,TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert,} from 'react-native';
-import {Ionicons,MaterialIcons,MaterialCommunityIcons,FontAwesome5,} from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { FontAwesome5, Ionicons, MaterialCommunityIcons, MaterialIcons, } from '@expo/vector-icons';
 import * as Location from 'expo-location';
+import { router } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, } from 'react-native';
 import { io, Socket } from 'socket.io-client';
 import Header from '../components/Header';
-import {getNearbyStops,getNearbyBuses,getNearbyBusesForDestination,getActiveBuses,NearbyStop,ActiveBus,RecommendedBus,} from '../services/busService';
 import { BACKEND_URL } from '../constants/config';
+import { ActiveBus, getActiveBuses, getNearbyBusesForDestination, getNearbyStops, NearbyStop, RecommendedBus } from '../services/busService';
 
 const FALLBACK_LAT = -1.9400;
 const FALLBACK_LNG = 30.1200;
@@ -610,7 +610,7 @@ export default function HomeScreen() {
 
                 <TouchableOpacity style={styles.viewRouteBtn} activeOpacity={0.7} onPress={() =>
                   router.push({
-                    pathname: '/map',
+                    pathname: '/bus-details',
                     params: {
                       busId: bus.id,
                       busNumber: bus.busNumber,
@@ -628,7 +628,7 @@ export default function HomeScreen() {
                   })
                   }
                 >
-                  <Text style={styles.viewRouteBtnText}>VIEW ROUTE </Text>
+                  <Text style={styles.viewRouteBtnText}>VIEW DETAILS </Text>
                   <Ionicons name="chevron-forward" size={12} color="#04325E" />
                 </TouchableOpacity>
               </View>

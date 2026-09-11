@@ -1,14 +1,16 @@
-import React from 'react';
-import { View, Text,
-  TouchableOpacity,
-  Image,
-  StyleSheet,
-  Platform,
-  StatusBar,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuth } from '@/context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import {
+  Image,
+  Platform,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface HeaderProps {
   title?: string;
@@ -23,6 +25,7 @@ export default function Header({
   showAvatar = true,
   onBack,
 }: HeaderProps) {
+  const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const topPadding = Math.max(
     insets.top,
@@ -41,7 +44,6 @@ export default function Header({
     <View style={[styles.headerContainer, { paddingTop: topPadding + 10 }]}>
       <StatusBar barStyle="light-content" backgroundColor="#04325E" translucent />
 
-      
       {/* <View style={styles.leftContainer}>
         {showBack ? (
           <TouchableOpacity style={styles.backButton} onPress={handleBack} activeOpacity={0.7}>
@@ -52,18 +54,25 @@ export default function Header({
         )}
       </View> */}
 
-  
       <View style={styles.centerContainer}>
         <Text style={styles.title} numberOfLines={1}>
           {title}
         </Text>
       </View>
 
-    
       <View style={styles.rightContainer}>
         {showAvatar ? (
-          <TouchableOpacity onPress={() => router.push('/(tabs)/profile')} activeOpacity={0.8}>
-            <Image source={require('../assets/BusImage/profile.png')} style={styles.avatar}/>
+          <TouchableOpacity
+            onPress={() => router.push('/(tabs)/profile')}
+            activeOpacity={0.8}
+          >
+            {user?.avatarUri ? (
+              <Image source={{ uri: user.avatarUri }} style={styles.avatar} />
+            ) : (
+              <View style={[styles.avatar, styles.avatarPlaceholder]}>
+                <Ionicons name="person" size={18} color="#CBD5E1" />
+              </View>
+            )}
           </TouchableOpacity>
         ) : (
           <View style={styles.sidePlaceholder} />
@@ -130,5 +139,10 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
+  },
+  avatarPlaceholder: {
+    backgroundColor: '#1E527D',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

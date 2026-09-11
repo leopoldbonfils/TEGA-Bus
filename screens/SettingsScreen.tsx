@@ -1,3 +1,4 @@
+import { useAuth } from '@/context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import {
@@ -7,27 +8,15 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import Header from '../components/Header';
 
 export default function SettingsScreen() {
+  const { user } = useAuth();
+
   return (
     <View style={styles.container}>
 
-      {/* Header */}
-      <View style={styles.header}>
-
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons
-            name="arrow-back"
-            size={25}
-            color="#12213D"
-          />
-        </TouchableOpacity>
-
-        <Text style={styles.headerTitle}>
-          Settings
-        </Text>
-
-      </View>
+      <Header title="Settings" showBack onBack={() => router.back()} />
 
       <ScrollView
         style={styles.scrollView}
@@ -48,15 +37,15 @@ export default function SettingsScreen() {
 
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>
-              Jean Claude
+              {user?.name || 'User Profile'}
             </Text>
 
             <Text style={styles.profilePhone}>
-              +250 788 123 456
+              {user?.phone || user?.email || 'No contact information'}
             </Text>
           </View>
 
-          <TouchableOpacity style={styles.editButton}>
+          <TouchableOpacity style={styles.editButton} onPress={() => router.push('/personal-info')}>
             <Ionicons
               name="create-outline"
               size={16}
@@ -77,7 +66,7 @@ export default function SettingsScreen() {
 
         <View style={styles.sectionCard}>
 
-          <TouchableOpacity style={styles.row} onPress={() => router.push('/saved-locations')}>
+          <TouchableOpacity style={styles.row} onPress={() => router.push('/personal-info' as any)}>
             <View style={styles.iconCircle}>
               <Ionicons
                 name="person-outline"

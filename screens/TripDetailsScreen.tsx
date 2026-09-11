@@ -7,38 +7,13 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import Header from '../components/Header';
 
 export default function TripDetailsScreen() {
   return (
     <View style={styles.container}>
 
-      {/* Top Header */}
-      <View style={styles.topHeader}>
-        <View style={styles.profileCircle}>
-          <Ionicons name="person" size={18} color="#0B3158" />
-        </View>
-
-        <Text style={styles.appName}>SmartRide Rwanda</Text>
-
-        <Ionicons
-          name="notifications-outline"
-          size={23}
-          color="#4E5662"
-        />
-      </View>
-
-      {/* Page Header */}
-      <View style={styles.pageHeader}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons
-            name="arrow-back"
-            size={25}
-            color="#14283F"
-          />
-        </TouchableOpacity>
-
-        <Text style={styles.pageTitle}>Trip Details</Text>
-      </View>
+      <Header title="Trip Details" showBack onBack={() => router.back()} />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
