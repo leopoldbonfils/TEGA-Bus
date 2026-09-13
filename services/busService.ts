@@ -67,14 +67,6 @@ export interface RecommendedBus {
     etaMinutes?: number;
     time?: string;
   }>;
-  rating?: number;
-  seatsRemaining?: number;
-  tripStops?: Array<{
-    name: string;
-    status?: 'COMPLETED' | 'CURRENT' | 'UPCOMING';
-    etaMinutes?: number;
-    time?: string;
-  }>;
 }
 
 export interface UpcomingTrip {
