@@ -1,28 +1,64 @@
-
-import * as Notifications from 'expo-notifications';
-import Constants from 'expo-constants';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
+import { isRunningInExpoGo } from 'expo';
 import { API_BASE_URL } from '../constants/config';
 import { Router } from 'expo-router';
+import type * as NotificationsType from 'expo-notifications';
 
+export function isExpoGo(): boolean {
+  try {
+    return isRunningInExpoGo() || Constants.appOwnership === 'expo';
+  } catch {
+    return false;
+  }
+}
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+export function isPushNotificationSupported(): boolean {
+  if (Platform.OS === 'web') return false;
+  if (Platform.OS === 'android' && isExpoGo()) return false;
+  return true;
+}
 
+let _notifications: typeof NotificationsType | null = null;
 
-export async function registerForPushNotificationsAsync(authToken: string): Promise<string | null> {
-  // Push notifications are NOT supported in Expo Go or on web
-  if (Platform.OS === 'web') {
-    console.log('Push notifications not supported on web');
+function getNotifications(): typeof NotificationsType | null {
+  if (!isPushNotificationSupported()) {
     return null;
   }
+
+  if (!_notifications) {
+    try {
+      _notifications = require('expo-notifications');
+      _notifications?.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowAlert: true,
+          shouldPlaySound: true,
+          shouldSetBadge: true,
+          shouldShowBanner: true,
+          shouldShowList: true,
+        }),
+      });
+    } catch (e) {
+      console.warn('expo-notifications could not be loaded:', e);
+      return null;
+    }
+  }
+
+  return _notifications;
+}
+
+export async function registerForPushNotificationsAsync(authToken: string): Promise<string | null> {
+  if (!isPushNotificationSupported()) {
+    if (Platform.OS === 'web') {
+      console.log('Push notifications not supported on web');
+    } else if (Platform.OS === 'android' && isExpoGo()) {
+      console.log('Push notifications in Expo Go are not supported on Android (SDK 53+). Use a development build.');
+    }
+    return null;
+  }
+
+  const Notifications = getNotifications();
+  if (!Notifications) return null;
 
   // Request permission
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
@@ -94,12 +130,18 @@ export async function registerForPushNotificationsAsync(authToken: string): Prom
   return expoPushToken;
 }
 
-
-
-let _responseListener: Notifications.Subscription | null = null;
-
+let _responseListener: { remove: () => void } | null = null;
 
 export function setupNotificationHandlers(router: Router): () => void {
+  if (!isPushNotificationSupported()) {
+    return () => {};
+  }
+
+  const Notifications = getNotifications();
+  if (!Notifications) {
+    return () => {};
+  }
+
   // Android: create a default notification channel
   if (Platform.OS === 'android') {
     Notifications.setNotificationChannelAsync('tega-alerts', {
@@ -110,25 +152,31 @@ export function setupNotificationHandlers(router: Router): () => void {
       sound: 'default',
       enableVibrate: true,
       showBadge: true,
+    }).catch((err) => {
+      console.warn('Failed to set notification channel:', err);
     });
   }
 
   // Listener: notification tapped while app is open or in background
   _responseListener = Notifications.addNotificationResponseReceivedListener((response) => {
-    console.log('🔔 Notification tapped:', response.notification.request.content.data);
+    console.log(' Notification tapped:', response.notification.request.content.data);
     router.push('/(tabs)/notifications');
   });
 
   // Handle killed-app tap: check if app was opened via a notification tap
-  Notifications.getLastNotificationResponseAsync().then((response) => {
-    if (response) {
-      console.log(' App opened via notification tap (killed-app)');
-      // Small delay to let the navigator mount
-      setTimeout(() => {
-        router.push('/(tabs)/notifications');
-      }, 500);
-    }
-  });
+  Notifications.getLastNotificationResponseAsync()
+    .then((response) => {
+      if (response) {
+        console.log(' App opened via notification tap (killed-app)');
+        // Small delay to let the navigator mount
+        setTimeout(() => {
+          router.push('/(tabs)/notifications');
+        }, 500);
+      }
+    })
+    .catch((err) => {
+      console.warn('Failed to get last notification response:', err);
+    });
 
   // Return cleanup function
   return () => {

@@ -610,7 +610,7 @@ export default function HomeScreen() {
 
                 <TouchableOpacity style={styles.viewRouteBtn} activeOpacity={0.7} onPress={() =>
                   router.push({
-                    pathname: '/bus-details',
+                    pathname: '/map',
                     params: {
                       busId: bus.id,
                       busNumber: bus.busNumber,

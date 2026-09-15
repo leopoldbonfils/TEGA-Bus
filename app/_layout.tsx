@@ -3,7 +3,15 @@ import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import Toast from 'react-native-toast-message';
 import { useEffect, useRef } from 'react';
-import {registerForPushNotificationsAsync, setupNotificationHandlers,} from '@/services/notificationService';
+import { LogBox } from 'react-native';
+import { isPushNotificationSupported, registerForPushNotificationsAsync, setupNotificationHandlers,
+} from '@/services/notificationService';
+
+// Suppress known Expo Go push notification warnings in dev mode (remote push notifications removed from Expo Go Android in SDK 53)
+LogBox.ignoreLogs([
+  'expo-notifications: Android Push notifications',
+  '`expo-notifications` functionality is not fully supported in Expo Go',
+]);
 
 function NotificationBootstrap() {
   const { token } = useAuth();
@@ -13,6 +21,7 @@ function NotificationBootstrap() {
 
   // Set up tap handler once on mount
   useEffect(() => {
+    if (!isPushNotificationSupported()) return;
     const cleanup = setupNotificationHandlers(router);
     cleanupRef.current = cleanup;
     return () => {
@@ -24,6 +33,7 @@ function NotificationBootstrap() {
 
   // Register push token whenever the auth token is available
   useEffect(() => {
+    if (!isPushNotificationSupported()) return;
     if (token && !registeredRef.current) {
       registeredRef.current = true;
       registerForPushNotificationsAsync(token).catch((err) => {
@@ -44,7 +54,7 @@ function NotificationBootstrap() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <NotificationBootstrap />
+      {isPushNotificationSupported() && <NotificationBootstrap />}
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="login" />

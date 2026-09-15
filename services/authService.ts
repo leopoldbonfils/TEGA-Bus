@@ -1,7 +1,7 @@
 import { Platform } from "react-native";
 import { API_BASE_URL } from "../constants/config";
 
-export const BASE_URL = 'https://tega-bus-backend.onrender.com/api';
+export const BASE_URL = API_BASE_URL;
 
 export interface RegisterPayLoad {
   name: string;

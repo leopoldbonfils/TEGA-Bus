@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, } from 'react-native';
 import Header from '../components/Header';
 export default function TripsScreen() {
-  const [activeTab, setActiveTab] = useState('completed');
+  const [activeTab, setActiveTab] = useState('upcoming');
 
   return (
     <View style={styles.container}>
@@ -14,7 +14,6 @@ export default function TripsScreen() {
       <Text style={styles.title}>My Trips</Text>
 
       <View style={styles.tabRow}>
-
         <TouchableOpacity
           style={[styles.tabButton, activeTab === 'upcoming' && styles.tabButtonActive]}
           onPress={() => setActiveTab('upcoming')}
@@ -41,127 +40,472 @@ export default function TripsScreen() {
             Completed
           </Text>
         </TouchableOpacity>
-
       </View>
 
-      <Text style={styles.sectionTitle}>
-        CURRENT JOURNEY
-      </Text>
+      {activeTab === 'upcoming' && (
+        <>
+          <Text style={styles.sectionTitle}>UPCOMING TRIPS</Text>
 
-      <TouchableOpacity style={styles.journeyCard} activeOpacity={0.85} onPress={() => router.push('/trip-details')}>
+          <View style={styles.upcomingCard}>
+            <View style={styles.upcomingTopRow}>
+              <View style={styles.upcomingDateRow}>
+                <View style={styles.calendarIconWrap}>
+                  <Ionicons name="calendar-outline" size={16} color="#2563EB" />
+                </View>
+                <Text style={styles.upcomingDateText}>Today, 04:30 PM</Text>
+              </View>
 
-        <View style={styles.greenBar} />
-
-        <View style={styles.journeyContent}>
-
-          <View style={styles.journeyHeader}>
-
-            <View style={styles.busRow}>
-              <Ionicons name="bus" size={18} color="#0B2F55" />
-              <Text style={styles.busText}>Bus 402 • Route 3</Text>
+              <View style={styles.scheduledPill}>
+                <Text style={styles.scheduledText}>Scheduled</Text>
+              </View>
             </View>
 
-            <View style={styles.statusPill}>
-              <Text style={styles.statusText}>In Transit</Text>
+            <View style={styles.upcomingBusRow}>
+              <Text style={styles.busText}>Bus 305 • Route 5</Text>
+              <View style={styles.countdownRow}>
+                <Ionicons name="time-outline" size={14} color="#596575" />
+                <Text style={styles.countdownText}>1h 10m</Text>
+              </View>
             </View>
 
-          </View>
-          <View style={styles.pointRow}>
-            <View style={styles.originDot} />
-            <View>
-              <Text style={styles.pointLabel}>Origin</Text>
-              <Text style={styles.pointName}>Kimironko</Text>
-              <Text style={styles.pointTime}>14:30 PM</Text>
+            <View style={styles.upcomingPointsRow}>
+              <View style={styles.upcomingPointsCol}>
+                <View style={styles.upcomingPointRow}>
+                  <View style={styles.upcomingOriginDot} />
+                  <Text style={styles.upcomingPointName}>Nyabugogo</Text>
+                </View>
+                <View style={styles.dashedLine} />
+                <View style={styles.upcomingPointRow}>
+                  <Ionicons name="location" size={14} color="#0B2F55" />
+                  <Text style={styles.upcomingPointName}>Kimironko</Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={styles.viewDetailsButton}
+                activeOpacity={0.85}
+                onPress={() => router.push('/trip-details')}
+              >
+                <Text style={styles.viewDetailsText}>View Details</Text>
+              </TouchableOpacity>
             </View>
           </View>
 
-          <View style={styles.timelineLine} />
-          <View style={styles.pointRow}>
-            <View style={styles.destinationDot} />
-            <View>
-              <Text style={styles.pointLabel}>Destination</Text>
-              <Text style={styles.pointName}>Downtown Terminal</Text>
-              <Text style={styles.pointTime}>Est. 15:15 PM</Text>
+          <View style={styles.upcomingCard}>
+            <View style={styles.upcomingTopRow}>
+              <View style={styles.upcomingDateRow}>
+                <View style={styles.calendarIconWrap}>
+                  <Ionicons name="calendar-outline" size={16} color="#2563EB" />
+                </View>
+                <Text style={styles.upcomingDateText}>Tomorrow, 07:00 AM</Text>
+              </View>
+
+              <View style={styles.scheduledPill}>
+                <Text style={styles.scheduledText}>Scheduled</Text>
+              </View>
+            </View>
+
+            <View style={styles.upcomingBusRow}>
+              <Text style={styles.busText}>Bus 101 • Route 1</Text>
+              <View style={styles.countdownRow}>
+                <Ionicons name="time-outline" size={14} color="#596575" />
+                <Text style={styles.countdownText}>45m</Text>
+              </View>
+            </View>
+
+            <View style={styles.upcomingPointsRow}>
+              <View style={styles.upcomingPointsCol}>
+                <View style={styles.upcomingPointRow}>
+                  <View style={styles.upcomingOriginDot} />
+                  <Text style={styles.upcomingPointName}>Remera</Text>
+                </View>
+                <View style={styles.dashedLine} />
+                <View style={styles.upcomingPointRow}>
+                  <Ionicons name="location" size={14} color="#0B2F55" />
+                  <Text style={styles.upcomingPointName}>Downtown Terminal</Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={styles.viewDetailsButton}
+                activeOpacity={0.85}
+                onPress={() => router.push('/trip-details')}
+              >
+                <Text style={styles.viewDetailsText}>View Details</Text>
+              </TouchableOpacity>
             </View>
           </View>
 
-        </View>
+          <TouchableOpacity activeOpacity={0.7}>
+            <Text style={styles.seeAllText}>See all upcoming</Text>
+          </TouchableOpacity>
+        </>
+      )}
 
-      </TouchableOpacity>
+      {activeTab === 'active' && (
+      <>
+        <Text style={styles.sectionTitle}>ACTIVE TRIP</Text>
 
-      <Text style={styles.sectionTitle}>
-        HISTORY
-      </Text>
-      <TouchableOpacity style={styles.historyCard} activeOpacity={0.85} onPress={() => router.push('/trip-details')}>
+        <TouchableOpacity style={styles.journeyCard} activeOpacity={0.85} onPress={() => router.push('/trip-details')}>
+          <View style={styles.greenBar} />
 
-        <View style={styles.historyHeader}>
-          <Text style={styles.historyDate}>Today, 08:15 AM</Text>
-          <View style={styles.completedPill}>
-            <Ionicons name="checkmark-circle" size={14} color="#0B3D66" />
-            <Text style={styles.completedText}>Completed</Text>
-          </View>
-        </View>
+          <View style={styles.journeyContent}>
+            <View style={styles.journeyHeader}>
+              <View style={styles.busRow}>
+                <Ionicons name="bus" size={18} color="#0B2F55" />
+                <Text style={styles.busText}>Bus 402 • Route 3</Text>
+              </View>
+              <View style={styles.statusPill}>
+                <Text style={styles.statusText}>In Transit</Text>
+              </View>
+            </View>
 
-        <View style={styles.historyBody}>
-          <View>
-            <Text style={styles.routeText}>Kigali City → Nyabugogo</Text>
-            <View style={styles.paymentRow}>
-              <Ionicons name="card-outline" size={14} color="#596575" />
-              <Text style={styles.paymentText}>Wallet Payment</Text>
+            <View style={styles.journeyMainRow}>
+            
+              <View style={styles.timelineCol}>
+                <View style={styles.pointRow}>
+                  <View style={styles.originDot} />
+                  <View>
+                    <Text style={styles.pointLabel}>Origin</Text>
+                    <Text style={styles.pointName}>Kimironko</Text>
+                    <Text style={styles.pointTime}>14:30 PM</Text>
+                  </View>
+                </View>
+
+                <View style={styles.timelineLine} />
+
+                <View style={styles.pointRow}>
+                  <View style={styles.destinationDot} />
+                  <View>
+                    <Text style={styles.pointLabel}>Destination</Text>
+                    <Text style={styles.pointName}>Downtown Terminal</Text>
+                    <Text style={styles.pointTime}>Est. 15:15 PM</Text>
+                  </View>
+                </View>
+              </View>
+
+            
+              <View style={styles.statsCol}>
+                <View style={styles.statsBox}>
+                  <View style={styles.statRow}>
+                    <View style={styles.statLeft}>
+                      <Ionicons name="speedometer-outline" size={16} color="#15803D" />
+                      <Text style={styles.statValue}>32 km/h</Text>
+                    </View>
+                    <Text style={styles.statLabel}>Speed</Text>
+                  </View>
+
+                  <View style={styles.statRow}>
+                    <View style={styles.statLeft}>
+                      <Ionicons name="location-outline" size={16} color="#15803D" />
+                      <Text style={styles.statValue}>1.2 km</Text>
+                    </View>
+                    <Text style={styles.statLabel}>Away</Text>
+                  </View>
+
+                  <View style={styles.statRow}>
+                    <View style={styles.statLeft}>
+                      <Ionicons name="time-outline" size={16} color="#15803D" />
+                      <Text style={styles.statValue}>15 min</Text>
+                    </View>
+                    <Text style={styles.statLabel}>ETA</Text>
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.trackBusButton}
+                  activeOpacity={0.85}
+                  onPress={() => router.push('/map')}
+                >
+                  <Text style={styles.trackBusText}>Track Bus</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-          <Text style={styles.priceText}>RWF 500</Text>
-        </View>
+        </TouchableOpacity>
 
-      </TouchableOpacity>
+        <TouchableOpacity style={styles.journeyCard} activeOpacity={0.85} onPress={() => router.push('/trip-details')}>
+          <View style={styles.greenBar} />
 
-      <TouchableOpacity style={styles.historyCard} activeOpacity={0.85} onPress={() => router.push('/trip-details')}>
+          <View style={styles.journeyContent}>
+            <View style={styles.journeyHeader}>
+              <View style={styles.busRow}>
+                <Ionicons name="bus" size={18} color="#0B2F55" />
+                <Text style={styles.busText}>Bus 302 • Route 2</Text>
+              </View>
+              <View style={styles.statusPill}>
+                <Text style={styles.statusText}>In Transit</Text>
+              </View>
+            </View>
 
-        <View style={styles.historyHeader}>
-          <Text style={styles.historyDate}>Yesterday, 17:45 PM</Text>
-          <View style={styles.completedPill}>
-            <Ionicons name="checkmark-circle" size={14} color="#0B3D66" />
-            <Text style={styles.completedText}>Completed</Text>
-          </View>
-        </View>
+            <View style={styles.journeyMainRow}>
+            
+              <View style={styles.timelineCol}>
+                <View style={styles.pointRow}>
+                  <View style={styles.originDot} />
+                  <View>
+                    <Text style={styles.pointLabel}>Origin</Text>
+                    <Text style={styles.pointName}>Nyabugogo</Text>
+                    <Text style={styles.pointTime}>14:30 PM</Text>
+                  </View>
+                </View>
 
-        <View style={styles.historyBody}>
-          <View>
-            <Text style={styles.routeText}>Remera → Downtown</Text>
-            <View style={styles.paymentRow}>
-              <Ionicons name="card-outline" size={14} color="#596575" />
-              <Text style={styles.paymentText}>Wallet Payment</Text>
+                <View style={styles.timelineLine} />
+
+                <View style={styles.pointRow}>
+                  <View style={styles.destinationDot} />
+                  <View>
+                    <Text style={styles.pointLabel}>Destination</Text>
+                    <Text style={styles.pointName}>Kimironko</Text>
+                    <Text style={styles.pointTime}>Est. 15:15 PM</Text>
+                  </View>
+                </View>
+              </View>
+
+            
+              <View style={styles.statsCol}>
+                <View style={styles.statsBox}>
+                  <View style={styles.statRow}>
+                    <View style={styles.statLeft}>
+                      <Ionicons name="speedometer-outline" size={16} color="#15803D" />
+                      <Text style={styles.statValue}>32 km/h</Text>
+                    </View>
+                    <Text style={styles.statLabel}>Speed</Text>
+                  </View>
+
+                  <View style={styles.statRow}>
+                    <View style={styles.statLeft}>
+                      <Ionicons name="location-outline" size={16} color="#15803D" />
+                      <Text style={styles.statValue}>1.2 km</Text>
+                    </View>
+                    <Text style={styles.statLabel}>Away</Text>
+                  </View>
+
+                  <View style={styles.statRow}>
+                    <View style={styles.statLeft}>
+                      <Ionicons name="time-outline" size={16} color="#15803D" />
+                      <Text style={styles.statValue}>15 min</Text>
+                    </View>
+                    <Text style={styles.statLabel}>ETA</Text>
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.trackBusButton}
+                  activeOpacity={0.85}
+                  onPress={() => router.push('/map')}
+                >
+                  <Text style={styles.trackBusText}>Track Bus</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-          <Text style={styles.priceText}>RWF 500</Text>
-        </View>
+        </TouchableOpacity>
 
-      </TouchableOpacity>
+        <TouchableOpacity style={styles.journeyCard} activeOpacity={0.85} onPress={() => router.push('/trip-details')}>
+          <View style={styles.greenBar} />
 
-      <TouchableOpacity style={styles.historyCard} activeOpacity={0.85} onPress={() => router.push('/trip-details')}>
+          <View style={styles.journeyContent}>
+            <View style={styles.journeyHeader}>
+              <View style={styles.busRow}>
+                <Ionicons name="bus" size={18} color="#0B2F55" />
+                <Text style={styles.busText}>Bus 301 • Route 4</Text>
+              </View>
+              <View style={styles.statusPill}>
+                <Text style={styles.statusText}>In Transit</Text>
+              </View>
+            </View>
 
-        <View style={styles.historyHeader}>
-          <Text style={styles.historyDate}>Oct 24, 09:00 AM</Text>
-          <View style={styles.completedPill}>
-            <Ionicons name="checkmark-circle" size={14} color="#0B3D66" />
-            <Text style={styles.completedText}>Completed</Text>
-          </View>
-        </View>
+            <View style={styles.journeyMainRow}>
+            
+              <View style={styles.timelineCol}>
+                <View style={styles.pointRow}>
+                  <View style={styles.originDot} />
+                  <View>
+                    <Text style={styles.pointLabel}>Origin</Text>
+                    <Text style={styles.pointName}>Remera</Text>
+                    <Text style={styles.pointTime}>14:30 PM</Text>
+                  </View>
+                </View>
 
-        <View style={styles.historyBody}>
-          <View>
-            <Text style={styles.routeText}>Kacyiru → Kimironko</Text>
-            <View style={styles.paymentRow}>
-              <Ionicons name="card-outline" size={14} color="#596575" />
-              <Text style={styles.paymentText}>Wallet Payment</Text>
+                <View style={styles.timelineLine} />
+
+                <View style={styles.pointRow}>
+                  <View style={styles.destinationDot} />
+                  <View>
+                    <Text style={styles.pointLabel}>Destination</Text>
+                    <Text style={styles.pointName}>Downtown Terminal</Text>
+                    <Text style={styles.pointTime}>Est. 15:15 PM</Text>
+                  </View>
+                </View>
+              </View>
+
+            
+              <View style={styles.statsCol}>
+                <View style={styles.statsBox}>
+                  <View style={styles.statRow}>
+                    <View style={styles.statLeft}>
+                      <Ionicons name="speedometer-outline" size={16} color="#15803D" />
+                      <Text style={styles.statValue}>32 km/h</Text>
+                    </View>
+                    <Text style={styles.statLabel}>Speed</Text>
+                  </View>
+
+                  <View style={styles.statRow}>
+                    <View style={styles.statLeft}>
+                      <Ionicons name="location-outline" size={16} color="#15803D" />
+                      <Text style={styles.statValue}>1.2 km</Text>
+                    </View>
+                    <Text style={styles.statLabel}>Away</Text>
+                  </View>
+
+                  <View style={styles.statRow}>
+                    <View style={styles.statLeft}>
+                      <Ionicons name="time-outline" size={16} color="#15803D" />
+                      <Text style={styles.statValue}>15 min</Text>
+                    </View>
+                    <Text style={styles.statLabel}>ETA</Text>
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.trackBusButton}
+                  activeOpacity={0.85}
+                  onPress={() => router.push('/map')}
+                >
+                  <Text style={styles.trackBusText}>Track Bus</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-          <Text style={styles.priceText}>RWF 450</Text>
-        </View>
+        </TouchableOpacity>
+      </>
+    )}
 
-      </TouchableOpacity>
+      {activeTab === 'completed' && (
+        <>
+          <Text style={styles.sectionTitle}>COMPLETED TRIPS</Text>
+          <TouchableOpacity style={styles.historyCard} activeOpacity={0.85} onPress={() => router.push('/trip-details')}>
+            <View style={styles.historyHeader}>
+              <Text style={styles.historyDate}>Yesterday, 17:45 PM</Text>
+              <View style={styles.completedPill}>
+                <Ionicons name="checkmark-circle" size={14} color="#0B3D66" />
+                <Text style={styles.completedText}>Completed</Text>
+              </View>
+            </View>
+            <View style={styles.historyBody}>
+              <View>
+                <Text style={styles.routeText}>Remera → Nyabugogo</Text>
+                <View style={styles.paymentRow}>
+                  <Ionicons name="card-outline" size={14} color="#596575" />
+                  <Text style={styles.paymentText}>Wallet Payment</Text>
+                </View>
+              </View>
+              <Text style={styles.priceText}>RWF 500</Text>
+            </View>
+          </TouchableOpacity>
 
-  </ScrollView>
+          <TouchableOpacity style={styles.historyCard} activeOpacity={0.85} onPress={() => router.push('/trip-details')}>
+            <View style={styles.historyHeader}>
+              <Text style={styles.historyDate}>Yesterday, 17:45 PM</Text>
+              <View style={styles.completedPill}>
+                <Ionicons name="checkmark-circle" size={14} color="#0B3D66" />
+                <Text style={styles.completedText}>Completed</Text>
+              </View>
+            </View>
+            <View style={styles.historyBody}>
+              <View>
+                <Text style={styles.routeText}>Nyabugogo → Downtown</Text>
+                <View style={styles.paymentRow}>
+                  <Ionicons name="card-outline" size={14} color="#596575" />
+                  <Text style={styles.paymentText}>Wallet Payment</Text>
+                </View>
+              </View>
+              <Text style={styles.priceText}>RWF 500</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.historyCard} activeOpacity={0.85} onPress={() => router.push('/trip-details')}>
+            <View style={styles.historyHeader}>
+              <Text style={styles.historyDate}>Yesterday, 17:45 PM</Text>
+              <View style={styles.completedPill}>
+                <Ionicons name="checkmark-circle" size={14} color="#0B3D66" />
+                <Text style={styles.completedText}>Completed</Text>
+              </View>
+            </View>
+            <View style={styles.historyBody}>
+              <View>
+                <Text style={styles.routeText}>Nyabugogo → Downtown</Text>
+                <View style={styles.paymentRow}>
+                  <Ionicons name="card-outline" size={14} color="#596575" />
+                  <Text style={styles.paymentText}>Wallet Payment</Text>
+                </View>
+              </View>
+              <Text style={styles.priceText}>RWF 500</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.historyCard} activeOpacity={0.85} onPress={() => router.push('/trip-details')}>
+            <View style={styles.historyHeader}>
+              <Text style={styles.historyDate}>Oct 24, 09:00 AM</Text>
+              <View style={styles.completedPill}>
+                <Ionicons name="checkmark-circle" size={14} color="#0B3D66" />
+                <Text style={styles.completedText}>Completed</Text>
+              </View>
+            </View>
+            <View style={styles.historyBody}>
+              <View>
+                <Text style={styles.routeText}>Nyabugogo → Remera</Text>
+                <View style={styles.paymentRow}>
+                  <Ionicons name="card-outline" size={14} color="#596575" />
+                  <Text style={styles.paymentText}>Wallet Payment</Text>
+                </View>
+              </View>
+              <Text style={styles.priceText}>RWF 450</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.historyCard} activeOpacity={0.85} onPress={() => router.push('/trip-details')}>
+            <View style={styles.historyHeader}>
+              <Text style={styles.historyDate}>Oct 24, 09:00 AM</Text>
+              <View style={styles.completedPill}>
+                <Ionicons name="checkmark-circle" size={14} color="#0B3D66" />
+                <Text style={styles.completedText}>Completed</Text>
+              </View>
+            </View>
+            <View style={styles.historyBody}>
+              <View>
+                <Text style={styles.routeText}>Nyabugogo → Kimironko</Text>
+                <View style={styles.paymentRow}>
+                  <Ionicons name="card-outline" size={14} color="#596575" />
+                  <Text style={styles.paymentText}>Wallet Payment</Text>
+                </View>
+              </View>
+              <Text style={styles.priceText}>RWF 450</Text>
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.historyCard} activeOpacity={0.85} onPress={() => router.push('/trip-details')}>
+            <View style={styles.historyHeader}>
+              <Text style={styles.historyDate}>Oct 24, 09:00 AM</Text>
+              <View style={styles.completedPill}>
+                <Ionicons name="checkmark-circle" size={14} color="#0B3D66" />
+                <Text style={styles.completedText}>Completed</Text>
+              </View>
+            </View>
+            <View style={styles.historyBody}>
+              <View>
+                <Text style={styles.routeText}>Nyabugogo → Nyacyonga</Text>
+                <View style={styles.paymentRow}>
+                  <Ionicons name="card-outline" size={14} color="#596575" />
+                  <Text style={styles.paymentText}>Wallet Payment</Text>
+                </View>
+              </View>
+              <Text style={styles.priceText}>RWF 600</Text>
+            </View>
+          </TouchableOpacity>
+        </>
+      )}
+    </ScrollView>
     </View>
   );
 }
@@ -310,19 +654,19 @@ const styles = StyleSheet.create({
   },
 
   pointLabel: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#596575',
   },
 
   pointName: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '800',
     color: '#0B2F55',
     marginTop: 2,
   },
 
   pointTime: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#596575',
     marginTop: 2,
   },
@@ -361,7 +705,7 @@ const styles = StyleSheet.create({
   completedText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#0B3D66',
+    color: '#22C55E',
   },
 
   historyBody: {
@@ -393,5 +737,193 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#0B2F55',
   },
+
+  upcomingCard: {
+  backgroundColor: '#fff',
+  borderWidth: 1,
+  borderColor: '#D5D9E0',
+  borderRadius: 14,
+  padding: 16,
+  marginBottom: 12,
+},
+
+upcomingTopRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: 12,
+},
+
+upcomingDateRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 8,
+},
+
+calendarIconWrap: {
+  width: 28,
+  height: 28,
+  borderRadius: 8,
+  backgroundColor: '#EAF0FE',
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
+upcomingDateText: {
+  fontSize: 14,
+  fontWeight: '600',
+  color: '#2563EB',
+},
+
+scheduledPill: {
+  backgroundColor: '#EAF0FE',
+  paddingHorizontal: 12,
+  paddingVertical: 4,
+  borderRadius: 20,
+},
+
+scheduledText: {
+  fontSize: 12,
+  fontWeight: '600',
+  color: '#2563EB',
+},
+
+upcomingBusRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: 14,
+},
+
+countdownRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 4,
+},
+
+countdownText: {
+  fontSize: 13,
+  color: '#596575',
+},
+
+upcomingPointsRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'flex-end',
+},
+
+upcomingPointsCol: {
+  flex: 1,
+},
+
+upcomingPointRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 10,
+},
+
+upcomingOriginDot: {
+  width: 12,
+  height: 12,
+  borderRadius: 6,
+  borderWidth: 2,
+  borderColor: '#0B2F55',
+},
+
+upcomingPointName: {
+  fontSize: 14,
+  fontWeight: '600',
+  color: '#0B2F55',
+},
+
+dashedLine: {
+  width: 1,
+  height: 16,
+  marginLeft: 5,
+  borderLeftWidth: 1,
+  borderLeftColor: '#D5D9E0',
+  borderStyle: 'dashed',
+},
+
+viewDetailsButton: {
+  borderWidth: 1,
+  borderColor: '#2563EB',
+  borderRadius: 20,
+  paddingHorizontal: 16,
+  paddingVertical: 8,
+},
+
+viewDetailsText: {
+  fontSize: 13,
+  fontWeight: '600',
+  color: '#2563EB',
+},
+
+seeAllText: {
+  fontSize: 14,
+  fontWeight: '600',
+  color: '#2563EB',
+  textAlign: 'center',
+  marginTop: 4,
+  marginBottom: 20,
+},
+
+journeyMainRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  gap: 12,
+},
+
+timelineCol: {
+  flex: 1,
+},
+
+statsCol: {
+  width: 140,
+},
+
+statsBox: {
+  backgroundColor: '#EEFBF3',
+  borderRadius: 10,
+  padding: 10,
+  marginBottom: 10,
+},
+
+statRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  paddingVertical: 4,
+},
+
+statLeft: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 6,
+},
+
+statValue: {
+  fontSize: 13,
+  fontWeight: '700',
+  color: '#0B2F55',
+},
+
+statLabel: {
+  fontSize: 12,
+  color: '#596575',
+},
+
+trackBusButton: {
+  backgroundColor: '#2563EB',
+  borderRadius: 10,
+  paddingVertical: 10,
+  alignItems: 'center',
+},
+
+trackBusText: {
+  fontSize: 13,
+  fontWeight: '700',
+  color: '#fff',
+},
 
 });
