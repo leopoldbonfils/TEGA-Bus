@@ -389,7 +389,7 @@ export default function TripsScreen() {
             <View style={styles.historyHeader}>
               <Text style={styles.historyDate}>Yesterday, 17:45 PM</Text>
               <View style={styles.completedPill}>
-                <Ionicons name="checkmark-circle" size={14} color="#0B3D66" />
+                <Ionicons name="checkmark-circle" size={14} color="#00ff00" />
                 <Text style={styles.completedText}>Completed</Text>
               </View>
             </View>
@@ -409,7 +409,7 @@ export default function TripsScreen() {
             <View style={styles.historyHeader}>
               <Text style={styles.historyDate}>Yesterday, 17:45 PM</Text>
               <View style={styles.completedPill}>
-                <Ionicons name="checkmark-circle" size={14} color="#0B3D66" />
+                <Ionicons name="checkmark-circle" size={14} color="#00ff00" />
                 <Text style={styles.completedText}>Completed</Text>
               </View>
             </View>
@@ -429,7 +429,7 @@ export default function TripsScreen() {
             <View style={styles.historyHeader}>
               <Text style={styles.historyDate}>Yesterday, 17:45 PM</Text>
               <View style={styles.completedPill}>
-                <Ionicons name="checkmark-circle" size={14} color="#0B3D66" />
+                <Ionicons name="checkmark-circle" size={14} color="#00ff00" />
                 <Text style={styles.completedText}>Completed</Text>
               </View>
             </View>
@@ -449,7 +449,7 @@ export default function TripsScreen() {
             <View style={styles.historyHeader}>
               <Text style={styles.historyDate}>Oct 24, 09:00 AM</Text>
               <View style={styles.completedPill}>
-                <Ionicons name="checkmark-circle" size={14} color="#0B3D66" />
+                <Ionicons name="checkmark-circle" size={14} color="#00ff00" />
                 <Text style={styles.completedText}>Completed</Text>
               </View>
             </View>
@@ -469,7 +469,7 @@ export default function TripsScreen() {
             <View style={styles.historyHeader}>
               <Text style={styles.historyDate}>Oct 24, 09:00 AM</Text>
               <View style={styles.completedPill}>
-                <Ionicons name="checkmark-circle" size={14} color="#0B3D66" />
+                <Ionicons name="checkmark-circle" size={14} color="#00ff00" />
                 <Text style={styles.completedText}>Completed</Text>
               </View>
             </View>
@@ -488,7 +488,7 @@ export default function TripsScreen() {
             <View style={styles.historyHeader}>
               <Text style={styles.historyDate}>Oct 24, 09:00 AM</Text>
               <View style={styles.completedPill}>
-                <Ionicons name="checkmark-circle" size={14} color="#0B3D66" />
+                <Ionicons name="checkmark-circle" size={14} color="#00ff00" />
                 <Text style={styles.completedText}>Completed</Text>
               </View>
             </View>
