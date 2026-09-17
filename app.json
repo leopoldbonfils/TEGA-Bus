@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "TEGA-Bus",
-    "slug": "TEGA-Bus",
+    "name": "TEGA Bus APP",
+    "slug": "tega-bus-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/BusImage/logo.png",
@@ -12,6 +12,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.tegabus.rwanda",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -61,7 +62,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "YOUR_EAS_PROJECT_ID"
+        "projectId": "87237b8f-1310-405b-9a5b-fd29315"
       }
     }
   }
