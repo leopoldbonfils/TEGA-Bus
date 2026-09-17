@@ -1,15 +1,7 @@
 import { useAuth } from '@/context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import {
-  Image,
-  Platform,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Image, Platform, StatusBar, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface HeaderProps {
