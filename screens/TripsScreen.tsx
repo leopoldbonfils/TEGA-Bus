@@ -1,14 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState, useEffect, useCallback } from 'react';
-import {ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  RefreshControl,
-  ActivityIndicator,
-} from 'react-native';
+import {ScrollView, StyleSheet, Text, TouchableOpacity, View, RefreshControl, ActivityIndicator,} from 'react-native';
 import Header from '../components/Header';
 import { getAllTrips, getActiveTrips, Trip } from '../services/tripService';
 
@@ -59,8 +52,7 @@ export default function TripsScreen() {
     <View style={styles.container}>
       <Header title="TEGA Bus Rwanda" showBack={false} />
 
-      <ScrollView
-        style={styles.scrollView}
+      <ScrollView style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -74,30 +66,19 @@ export default function TripsScreen() {
       >
         <Text style={styles.title}>My Trips</Text>
 
-        {/* Tab Row */}
+        
         <View style={styles.tabRow}>
-          <TouchableOpacity
-            style={[styles.tabButton, activeTab === 'upcoming' && styles.tabButtonActive]}
-            onPress={() => setActiveTab('upcoming')}
-          >
+          <TouchableOpacity style={[styles.tabButton, activeTab === 'upcoming' && styles.tabButtonActive]} onPress={() => setActiveTab('upcoming')}>
             <Text style={[styles.tabText, activeTab === 'upcoming' && styles.tabTextActive]}>
               Upcoming
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.tabButton, activeTab === 'active' && styles.tabButtonActive]}
-            onPress={() => setActiveTab('active')}
-          >
-            <Text style={[styles.tabText, activeTab === 'active' && styles.tabTextActive]}>
-              Active
-            </Text>
+          <TouchableOpacity style={[styles.tabButton, activeTab === 'active' && styles.tabButtonActive]} onPress={() => setActiveTab('active')}>
+            <Text style={[styles.tabText, activeTab === 'active' && styles.tabTextActive]}> Active </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.tabButton, activeTab === 'completed' && styles.tabButtonActive]}
-            onPress={() => setActiveTab('completed')}
-          >
+          <TouchableOpacity style={[styles.tabButton, activeTab === 'completed' && styles.tabButtonActive]} onPress={() => setActiveTab('completed')}>
             <Text style={[styles.tabText, activeTab === 'completed' && styles.tabTextActive]}>
               Completed
             </Text>
@@ -111,7 +92,7 @@ export default function TripsScreen() {
           </View>
         ) : (
           <>
-            {/* UPCOMING TAB */}
+            
             {activeTab === 'upcoming' && (
               <>
                 <Text style={styles.sectionTitle}>UPCOMING TRIPS</Text>
@@ -171,8 +152,7 @@ export default function TripsScreen() {
                           </View>
                         </View>
 
-                        <TouchableOpacity
-                          style={styles.viewDetailsButton}
+                        <TouchableOpacity style={styles.viewDetailsButton}
                           activeOpacity={0.85}
                           onPress={() => navigateToDetails(trip.id)}
                         >
@@ -185,7 +165,7 @@ export default function TripsScreen() {
               </>
             )}
 
-            {/* ACTIVE TAB */}
+          
             {activeTab === 'active' && (
               <>
                 <Text style={styles.sectionTitle}>ACTIVE TRIPS</Text>
@@ -301,7 +281,7 @@ export default function TripsScreen() {
               </>
             )}
 
-            {/* COMPLETED TAB */}
+      
             {activeTab === 'completed' && (
               <>
                 <Text style={styles.sectionTitle}>COMPLETED TRIPS</Text>

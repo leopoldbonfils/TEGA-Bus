@@ -89,7 +89,7 @@ export default function ExploreScreen() {
         <View style={styles.sectionContainer}>
           <View style={styles.textWords}>
             <Text style={styles.NearTitle}>Nearby Bus Stops</Text>
-            <TouchableOpacity onPress={() => router.push('/map')}>
+            <TouchableOpacity onPress={() => router.push('/emergency')}>
               <Text style={styles.viewMap}>View All</Text>
             </TouchableOpacity>
           </View>
@@ -141,7 +141,7 @@ export default function ExploreScreen() {
             ) : filteredRoutes.length === 0 ? (
               <View style={{ paddingVertical: 20, alignItems: 'center' }}>
                 <Text style={{ color: '#64748B', fontSize: 14 }}>
-                  No routes found for "{searchQuery}"
+                  No routes found for {searchQuery}
                 </Text>
               </View>
             ) : (
