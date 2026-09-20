@@ -1,37 +1,90 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, Alert,} from 'react-native';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { router, useLocalSearchParams } from 'expo-router';
 import Header from '../components/Header';
+import { useAuth } from '@/context/AuthContext';
 
 export default function PaymentScreen() {
-  const [selectedMethod, setSelectedMethod] = useState('mobile');
+  const { user } = useAuth();
+  const params = useLocalSearchParams<{
+    tripId?: string;
+    routeId?: string;
+    from?: string;
+    to?: string;
+    fare?: string;
+  }>();
+
+  // Dynamic or fallback trip info
+  const fromLocation = params.from || 'Kigali City';
+  const toLocation = params.to || 'Nyabugogo';
+  const totalAmount = params.fare ? parseInt(params.fare, 10) : 500;
+  const serviceFee = 20;
+  const subtotal = Math.max(0, totalAmount - serviceFee);
+
+  // Auto-fill phone from logged-in user if available (stripping +250 if present)
+  const initialPhone = (user?.phone || '')
+    .replace(/^\+?250/, '')
+    .replace(/\s+/g, '');
+
+  const [phoneNumber, setPhoneNumber] = useState(initialPhone);
+  const [isFocused, setIsFocused] = useState(false);
+
+  // Format phone number with spaces (e.g. 0788 123 456)
+  const handlePhoneChange = (text: string) => {
+    const cleaned = text.replace(/[^0-9]/g, '').slice(0, 10);
+    setPhoneNumber(cleaned);
+  };
+
+  const formattedDisplayNumber = () => {
+    if (phoneNumber.length <= 4) return phoneNumber;
+    if (phoneNumber.length <= 7)
+      return `${phoneNumber.slice(0, 4)} ${phoneNumber.slice(4)}`;
+    return `${phoneNumber.slice(0, 4)} ${phoneNumber.slice(4, 7)} ${phoneNumber.slice(7)}`;
+  };
+
+  const isPhoneValid = () => {
+    // Valid Rwanda mobile numbers are 9 or 10 digits (078/079/072/073 or 78/79/72/73)
+    const cleaned = phoneNumber.replace(/\s+/g, '');
+    return cleaned.length >= 9 && cleaned.length <= 10;
+  };
+
+  const handleProceed = () => {
+    if (!isPhoneValid()) {
+      Alert.alert(
+        'Invalid Phone Number',
+        'Please enter a valid Rwandan mobile number (e.g. 0788 123 456).'
+      );
+      return;
+    }
+
+    // Proceed to next step / trip details
+    router.replace('/trip-details');
+  };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       <Header title="Payment" showBack onBack={() => router.back()} />
 
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
+        {/* Trip Summary Card */}
         <View style={styles.tripCard}>
-
           <View style={styles.priceRow}>
-            <Text style={styles.price}>RWF 500</Text>
+            <Text style={styles.price}>RWF {totalAmount.toLocaleString()}</Text>
 
             <View style={styles.secureBadge}>
               <Ionicons
                 name="shield-checkmark-outline"
-                size={17}
-                color="#32D875"
+                size={16}
+                color="#16A34A"
               />
               <Text style={styles.secureText}>Secure</Text>
             </View>
@@ -42,476 +95,497 @@ export default function PaymentScreen() {
           <View style={styles.locationContainer}>
             <View style={styles.locationIcons}>
               <View style={styles.startCircle} />
-
               <View style={styles.locationLine} />
-
               <View style={styles.endCircle} />
             </View>
 
             <View style={styles.locations}>
-
               <Text style={styles.locationLabel}>From</Text>
-              <Text style={styles.locationName}>Kigali City</Text>
+              <Text style={styles.locationName}>{fromLocation}</Text>
 
               <Text style={styles.locationLabel}>To</Text>
-              <Text style={styles.locationName}>Nyabugogo</Text>
-
+              <Text style={styles.locationName}>{toLocation}</Text>
             </View>
-
           </View>
-
         </View>
 
-        {/* Payment Method */}
-        <Text style={styles.sectionTitle}>
-          Payment Method
-        </Text>
-        <TouchableOpacity
-          style={[
-            styles.paymentOption,
-            selectedMethod === 'mobile' && styles.selectedOption,
-          ]}
-          onPress={() => setSelectedMethod('mobile')}
-        >
+        {/* Payment Method - Mobile Money Only */}
+        <Text style={styles.sectionTitle}>Payment Method</Text>
 
+        <View style={styles.momoCard}>
+          {/* Header Row */}
+          <View style={styles.momoHeaderRow}>
+            <View style={styles.momoIconBadge}>
+              <Ionicons name="phone-portrait" size={24} color="#06467F" />
+            </View>
+            <View style={styles.momoHeaderText}>
+              <View style={styles.brandRow}>
+                <Text style={styles.momoTitle}>Mobile Money</Text>
+                <View style={styles.mtnTag}>
+                  <Text style={styles.mtnTagText}>MTN MoMo</Text>
+                </View>
+              </View>
+              <Text style={styles.momoSubtitle}>Direct payment via phone prompt</Text>
+            </View>
+            <View style={styles.radioSelected}>
+              <View style={styles.radioDot} />
+            </View>
+          </View>
+
+          {/* Divider */}
+          <View style={styles.cardInnerDivider} />
+
+          {/* Phone Number Input Section */}
+          <Text style={styles.inputLabel}>Enter MTN MoMo Phone Number</Text>
           <View
             style={[
-              styles.radio,
-              selectedMethod === 'mobile' && styles.radioSelected,
+              styles.phoneInputWrapper,
+              isFocused && styles.phoneInputWrapperFocused,
             ]}
           >
-            {selectedMethod === 'mobile' && (
-              <View style={styles.radioDot} />
+            <View style={styles.countryCodeBadge}>
+              <Text style={styles.flagEmoji}>🇷🇼</Text>
+              <Text style={styles.countryCodeText}>+250</Text>
+            </View>
+
+            <TextInput
+              style={styles.phoneInput}
+              placeholder="078X XXX XXX"
+              placeholderTextColor="#94A3B8"
+              keyboardType="phone-pad"
+              value={formattedDisplayNumber()}
+              onChangeText={handlePhoneChange}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
+              maxLength={12}
+            />
+
+            {phoneNumber.length > 0 && (
+              <TouchableOpacity
+                onPress={() => setPhoneNumber('')}
+                style={styles.clearButton}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="close-circle" size={18} color="#94A3B8" />
+              </TouchableOpacity>
             )}
           </View>
 
-          <View style={styles.methodIcon}>
-            <Ionicons
-              name="phone-portrait-outline"
-              size={27}
-              color="#06467F"
+          {/* Helper / Prompt Note */}
+          <View style={styles.infoBanner}>
+            <MaterialCommunityIcons
+              name="cellphone-wireless"
+              size={18}
+              color="#0284C7"
             />
-          </View>
-
-          <View>
-            <Text style={styles.methodTitle}>
-              Mobile Money
-            </Text>
-
-            <Text style={styles.methodSubtitle}>
-              MTN / Airtel
+            <Text style={styles.infoBannerText}>
+              You will receive an instant prompt on this phone to authorize payment by entering your MTN PIN.
             </Text>
           </View>
+        </View>
 
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.paymentOption,
-            selectedMethod === 'card' && styles.selectedOption,
-          ]}
-          onPress={() => setSelectedMethod('card')}
-        >
+        {/* Security Assurance */}
+        <View style={styles.securityBox}>
+          <Ionicons name="lock-closed" size={16} color="#16A34A" />
+          <Text style={styles.securityBoxText}>
+            Never share your PIN. You will enter your PIN only on your phone's official MTN prompt. TEGA never requests or stores your PIN.
+          </Text>
+        </View>
 
-          <View
-            style={[
-              styles.radio,
-              selectedMethod === 'card' && styles.radioSelected,
-            ]}
-          >
-            {selectedMethod === 'card' && (
-              <View style={styles.radioDot} />
-            )}
-          </View>
-
-          <View style={styles.methodIcon}>
-            <Ionicons
-              name="card-outline"
-              size={27}
-              color="#4D5968"
-            />
-          </View>
-
-          <View>
-            <Text style={styles.methodTitle}>
-              Credit/Debit Card
-            </Text>
-
-            <Text style={styles.methodSubtitle}>
-              Visa, Mastercard
-            </Text>
-          </View>
-
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.paymentOption,
-            selectedMethod === 'wallet' && styles.selectedOption,
-          ]}
-          onPress={() => setSelectedMethod('wallet')}
-        >
-
-          <View
-            style={[
-              styles.radio,
-              selectedMethod === 'wallet' && styles.radioSelected,
-            ]}
-          >
-            {selectedMethod === 'wallet' && (
-              <View style={styles.radioDot} />
-            )}
-          </View>
-
-          <View style={styles.methodIcon}>
-            <Ionicons
-              name="wallet-outline"
-              size={27}
-              color="#4D5968"
-            />
-          </View>
-
-          <View>
-            <Text style={styles.methodTitle}>
-              SmartRide Wallet
-            </Text>
-
-            <Text style={styles.methodSubtitle}>
-              Balance: RWF 1,200
-            </Text>
-          </View>
-
-        </TouchableOpacity>
+        {/* Price Breakdown */}
         <View style={styles.summaryCard}>
-
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Subtotal</Text>
-
-         <Text style={styles.summaryValue}>  RWF 480</Text>
+            <Text style={styles.summaryValue}>RWF {subtotal.toLocaleString()}</Text>
           </View>
 
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Service Fee</Text>
-
-        <Text style={styles.summaryValue}>  RWF 20</Text>
+            <Text style={styles.summaryValue}>RWF {serviceFee.toLocaleString()}</Text>
           </View>
 
           <View style={styles.summaryDivider} />
 
           <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Total</Text>
-
-            <Text style={styles.totalValue}>RWF 500</Text>
+            <Text style={styles.totalLabel}>Total Amount</Text>
+            <Text style={styles.totalValue}>RWF {totalAmount.toLocaleString()}</Text>
           </View>
-
         </View>
-
       </ScrollView>
+
+      {/* Bottom Sticky Action Button */}
       <View style={styles.bottomContainer}>
-
-        <TouchableOpacity style={styles.payButton} onPress={() => router.replace('/trip-details')}>
-
+        <TouchableOpacity
+          style={[
+            styles.payButton,
+            !isPhoneValid() && styles.payButtonDisabled,
+          ]}
+          onPress={handleProceed}
+          activeOpacity={0.85}
+        >
           <Text style={styles.payButtonText}>
-            Pay & Continue
+            Pay RWF {totalAmount.toLocaleString()} with MoMo
           </Text>
-
-          <Ionicons
-            name="arrow-forward"
-            size={25}
-            color="#FFFFFF"
-          />
-
+          <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
         </TouchableOpacity>
 
         <View style={styles.encrypted}>
-
-          <Ionicons
-            name="lock-closed-outline"
-            size={16}
-            color="#59616C"
-          />
-
+          <Ionicons name="shield-checkmark" size={14} color="#64748B" />
           <Text style={styles.encryptedText}>
-            Payments are secure and encrypted
+            Secured by MTN Mobile Money & Encrypted
           </Text>
-
         </View>
-
       </View>
-
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FC',
+    backgroundColor: '#F7F8FC',
   },
-  header: {
-    height: 72,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 28,
-    borderBottomWidth: 1,
-    borderBottomColor: '#D6DAE2',
-    gap: 25,
-  },
-
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#0B2745',
-  },
-
   scrollView: {
     flex: 1,
   },
-
   scrollContent: {
-    padding: 20,
-    paddingBottom: 30,
+    padding: 18,
+    paddingBottom: 28,
   },
   tripCard: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#C7CCD6',
-    borderRadius: 10,
-    padding: 26,
+    borderColor: '#E2E8F0',
+    borderRadius: 14,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
   },
-
   priceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-
   price: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#10243B',
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#0B2745',
   },
   secureBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: '#DDFCE9',
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
-
   secureText: {
-    color: '#32D875',
-    fontSize: 14,
+    color: '#15803D',
+    fontSize: 12,
+    fontWeight: '600',
   },
   divider: {
     height: 1,
-    backgroundColor: '#DDE1E7',
-    marginVertical: 20,
+    backgroundColor: '#EDF2F7',
+    marginVertical: 16,
   },
   locationContainer: {
     flexDirection: 'row',
   },
-
   locationIcons: {
-    width: 25,
+    width: 20,
     alignItems: 'center',
-    paddingTop: 5,
+    paddingTop: 4,
     marginRight: 12,
   },
-
   startCircle: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
     borderWidth: 3,
     borderColor: '#06467F',
     backgroundColor: '#FFFFFF',
   },
-
   locationLine: {
     width: 2,
-    height: 40,
-    backgroundColor: '#C9D0D9',
+    height: 38,
+    backgroundColor: '#CBD5E1',
   },
-
   endCircle: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: '#42DB79',
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#16A34A',
   },
-
   locations: {
     flex: 1,
   },
-
   locationLabel: {
-    fontSize: 15,
-    color: '#555D68',
-    marginBottom: 3,
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '500',
+    marginBottom: 2,
   },
-
   locationName: {
     fontSize: 14,
-    color: '#12263E',
-    marginBottom: 23,
-  },
-
-  sectionTitle: {
-    fontSize: 14,
     fontWeight: '700',
-    color: '#10243B',
-    marginTop: 32,
-    marginBottom: 14,
+    color: '#0F172A',
+    marginBottom: 16,
   },
-
-  paymentOption: {
-    minHeight: 110,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#C7CCD6',
-    borderRadius: 10,
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginTop: 24,
     marginBottom: 12,
-    paddingHorizontal: 24,
+  },
+  momoCard: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#06467F',
+    borderRadius: 14,
+    padding: 18,
+    marginBottom: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  momoHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-
-  selectedOption: {
-    borderWidth: 2,
-    borderColor: '#06467F',
-    backgroundColor: '#EFF5FF',
-  },
-
-  radio: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    borderWidth: 1,
-    borderColor: '#C1C8D2',
+  momoIconBadge: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#EBF3FF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 20,
+    marginRight: 14,
   },
-
+  momoHeaderText: {
+    flex: 1,
+  },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  momoTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  mtnTag: {
+    backgroundColor: '#FEF08A',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  mtnTagText: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#854D0E',
+    letterSpacing: 0.2,
+  },
+  momoSubtitle: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 2,
+  },
   radioSelected: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     backgroundColor: '#06467F',
-    borderColor: '#06467F',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-
   radioDot: {
-    width: 9,
-    height: 9,
-    borderRadius: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: '#FFFFFF',
   },
-
-  methodIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#D9E8FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 20,
+  cardInnerDivider: {
+    height: 1,
+    backgroundColor: '#F1F5F9',
+    marginVertical: 14,
   },
-
-  methodTitle: {
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 8,
+  },
+  phoneInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  phoneInputWrapperFocused: {
+    borderColor: '#06467F',
+    backgroundColor: '#FFFFFF',
+  },
+  countryCodeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRightWidth: 1,
+    borderRightColor: '#E2E8F0',
+  },
+  flagEmoji: {
+    fontSize: 16,
+  },
+  countryCodeText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  phoneInput: {
+    flex: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     fontSize: 15,
     fontWeight: '600',
-    color: '#14283F',
-    marginBottom: 4,
+    color: '#0F172A',
   },
-
-  methodSubtitle: {
-    fontSize: 14,
-    color: '#59616C',
+  clearButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
   },
-
+  infoBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: '#F0F9FF',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 12,
+  },
+  infoBannerText: {
+    fontSize: 11.5,
+    color: '#0369A1',
+    lineHeight: 16,
+    flex: 1,
+  },
+  securityBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 14,
+  },
+  securityBoxText: {
+    fontSize: 11.5,
+    color: '#15803D',
+    lineHeight: 16,
+    flex: 1,
+  },
   summaryCard: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#C7CCD6',
-    borderRadius: 10,
-    padding: 26,
-    marginTop: 8,
-    marginBottom: 20,
+    borderColor: '#E2E8F0',
+    borderRadius: 14,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
   },
-
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 18,
+    marginBottom: 12,
   },
-
   summaryLabel: {
-    fontSize: 14,
-    color: '#555D68',
+    fontSize: 13.5,
+    color: '#64748B',
   },
-
   summaryValue: {
-    fontSize: 14,
-    color: '#555D68',
+    fontSize: 13.5,
+    fontWeight: '600',
+    color: '#1E293B',
   },
-
   summaryDivider: {
     height: 1,
-    backgroundColor: '#DDE1E7',
-    marginBottom: 22,
+    backgroundColor: '#EDF2F7',
+    marginVertical: 12,
   },
-
   totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
   },
-
   totalLabel: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#10243B',
+    color: '#0F172A',
   },
-
   totalValue: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#10243B',
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#06467F',
   },
   bottomContainer: {
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
-    borderTopColor: '#D6DAE2',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 18,
+    borderTopColor: '#E2E8F0',
+    paddingHorizontal: 18,
+    paddingTop: 14,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 4,
   },
-
   payButton: {
-    height: 72,
+    height: 54,
     backgroundColor: '#06467F',
-    borderRadius: 10,
+    borderRadius: 12,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
   },
-
+  payButtonDisabled: {
+    backgroundColor: '#94A3B8',
+  },
   payButtonText: {
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '700',
   },
-
   encrypted: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 6,
-    marginTop: 14,
+    marginTop: 10,
   },
-
   encryptedText: {
-    fontSize: 15,
-    color: '#59616C',
-    letterSpacing: 0.5,
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '500',
   },
 });
